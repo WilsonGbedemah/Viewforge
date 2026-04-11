@@ -91,6 +91,10 @@ class CampaignBase(BaseModel):
     entry_paths: List[str] = ["home", "search", "suggested"]
     search_keywords: Optional[str] = None
     account_ids: List[int] = []
+    auto_create_accounts: bool = False
+    min_accounts: int = 1
+    auto_create_country: str = "us"
+    auto_create_proxy_id: Optional[int] = None
 
 class CampaignCreate(CampaignBase):
     schedule_start: Optional[datetime] = None
@@ -111,6 +115,10 @@ class CampaignUpdate(BaseModel):
     entry_paths: Optional[List[str]] = None
     search_keywords: Optional[str] = None
     account_ids: Optional[List[int]] = None
+    auto_create_accounts: Optional[bool] = None
+    min_accounts: Optional[int] = None
+    auto_create_country: Optional[str] = None
+    auto_create_proxy_id: Optional[int] = None
     schedule_start: Optional[datetime] = None
     schedule_end: Optional[datetime] = None
 

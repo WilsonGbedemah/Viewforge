@@ -6,6 +6,14 @@ import { Plus, Play, Square, Trash2, Edit2, ChevronDown, ChevronUp, Download } f
 
 const ENTRY_OPTS = ['home', 'search', 'suggested', 'channel', 'playlist', 'notification']
 const TYPE_OPTS  = ['video', 'short', 'livestream', 'channel', 'playlist']
+const COUNTRIES  = [
+  { value: 'us', label: 'United States' },
+  { value: 'gb', label: 'United Kingdom' },
+  { value: 'ca', label: 'Canada' },
+  { value: 'au', label: 'Australia' },
+  { value: 'de', label: 'Germany' },
+  { value: 'fr', label: 'France' },
+]
 
 const EMPTY = {
   name: '', target_url: '', target_type: 'video',
@@ -16,11 +24,16 @@ const EMPTY = {
   search_keywords: '',
   schedule_start: '', schedule_end: '',
   account_ids: [],
+  auto_create_accounts: false,
+  min_accounts: 3,
+  auto_create_country: 'us',
+  auto_create_proxy_id: '',
 }
 
 export default function Campaigns() {
   const [campaigns, setCampaigns] = useState([])
   const [accounts,  setAccounts]  = useState([])
+  const [proxies,   setProxies]   = useState([])
   const [modal,     setModal]     = useState(false)
   const [editing,   setEditing]   = useState(null)
   const [form,      setForm]      = useState(EMPTY)
@@ -30,9 +43,10 @@ export default function Campaigns() {
   const [loading,   setLoading]   = useState(false)
 
   const load = async () => {
-    const [c, a] = await Promise.all([api.listCampaigns(), api.listAccounts()])
+    const [c, a, p] = await Promise.all([api.listCampaigns(), api.listAccounts(), api.listProxies()])
     setCampaigns(c)
     setAccounts(a)
+    setProxies(p)
   }
 
   useEffect(() => { load() }, [])
@@ -58,6 +72,10 @@ export default function Campaigns() {
       schedule_start: c.schedule_start ? c.schedule_start.slice(0, 16) : '',
       schedule_end: c.schedule_end ? c.schedule_end.slice(0, 16) : '',
       account_ids: c.account_ids || [],
+      auto_create_accounts: c.auto_create_accounts || false,
+      min_accounts: c.min_accounts ?? 3,
+      auto_create_country: c.auto_create_country || 'us',
+      auto_create_proxy_id: c.auto_create_proxy_id || '',
     })
     setError('')
     setModal(true)
@@ -72,6 +90,8 @@ export default function Campaigns() {
         max_watch_seconds: Number(form.max_watch_seconds),
         sessions_per_account_day: Number(form.sessions_per_account_day),
         total_sessions_target: Number(form.total_sessions_target),
+        min_accounts: Number(form.min_accounts),
+        auto_create_proxy_id: form.auto_create_proxy_id ? Number(form.auto_create_proxy_id) : null,
         comment_phrases: form.comment_phrases
           ? form.comment_phrases.split('\n').map(s => s.trim()).filter(Boolean)
           : [],
@@ -216,6 +236,11 @@ export default function Campaigns() {
                   {c.enable_comments && <span className="tag bg-yellow-900/30 text-forge-amber">comments on</span>}
                   {(c.account_ids || []).length > 0 && (
                     <span className="tag bg-forge-muted text-forge-dim">{c.account_ids.length} accounts</span>
+                  )}
+                  {c.auto_create_accounts && (
+                    <span className="tag bg-forge-green/10 text-forge-green border border-forge-green/30">
+                      auto-create ≥{c.min_accounts}
+                    </span>
                   )}
                   {c.schedule_start && (
                     <span className="tag bg-forge-muted text-forge-dim">
@@ -375,10 +400,52 @@ export default function Campaigns() {
               )}
             </div>
 
+            {/* Auto-create accounts */}
+            <div className={`space-y-3 rounded p-3 border transition-colors ${form.auto_create_accounts ? 'border-forge-green/30 bg-forge-green/5' : 'border-forge-border'}`}>
+              <label className="flex items-center gap-2.5 cursor-pointer">
+                <input type="checkbox" checked={form.auto_create_accounts}
+                  onChange={fb('auto_create_accounts')} className="accent-forge-green" />
+                <div>
+                  <span className="text-sm font-medium text-forge-text">Auto-create accounts when needed</span>
+                  <p className="text-xs text-forge-dim font-mono mt-0.5">
+                    Engine automatically creates new Google accounts when the pool is empty or below the minimum.
+                  </p>
+                </div>
+              </label>
+
+              {form.auto_create_accounts && (
+                <div className="grid grid-cols-3 gap-3 pt-1">
+                  <div>
+                    <label className="text-xs font-mono text-forge-dim mb-1 block">Min accounts in pool</label>
+                    <input className="w-full px-3 py-2 text-sm" type="number" min="1" max="20"
+                      value={form.min_accounts} onChange={f('min_accounts')} />
+                  </div>
+                  <div>
+                    <label className="text-xs font-mono text-forge-dim mb-1 block">Phone number country</label>
+                    <select className="w-full px-3 py-2 text-sm" value={form.auto_create_country} onChange={f('auto_create_country')}>
+                      {COUNTRIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-mono text-forge-dim mb-1 block">Proxy for new accounts</label>
+                    <select className="w-full px-3 py-2 text-sm" value={form.auto_create_proxy_id} onChange={f('auto_create_proxy_id')}>
+                      <option value="">— None —</option>
+                      {proxies.map(p => <option key={p.id} value={p.id}>{p.label} ({p.host}:{p.port})</option>)}
+                    </select>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Account assignment */}
             <div>
               <p className="text-xs font-mono text-forge-dim uppercase tracking-wider mb-2">
                 Assigned Accounts ({form.account_ids.length} selected)
+                {form.auto_create_accounts && (
+                  <span className="ml-2 text-forge-green normal-case font-normal">
+                    — leave empty to let the engine create them automatically
+                  </span>
+                )}
               </p>
               <div className="grid grid-cols-2 gap-1.5 max-h-32 overflow-y-auto">
                 {accounts.map(a => (
@@ -389,7 +456,13 @@ export default function Campaigns() {
                     <Badge status={a.status} />
                   </label>
                 ))}
-                {accounts.length === 0 && <p className="text-forge-dim text-xs font-mono col-span-2">No accounts registered</p>}
+                {accounts.length === 0 && (
+                  <p className="text-forge-dim text-xs font-mono col-span-2">
+                    {form.auto_create_accounts
+                      ? 'No accounts yet — the engine will create them when the campaign starts.'
+                      : 'No accounts registered'}
+                  </p>
+                )}
               </div>
             </div>
 

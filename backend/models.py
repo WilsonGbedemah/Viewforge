@@ -73,6 +73,10 @@ class Campaign(Base):
     entry_paths = Column(JSON, default=list)              # home, search, suggested, channel, playlist
     search_keywords = Column(String, nullable=True)       # keywords used for search entry path
     account_ids = Column(JSON, default=list)              # assigned account IDs
+    auto_create_accounts = Column(Boolean, default=False) # auto-create accounts when pool runs dry
+    min_accounts = Column(Integer, default=1)             # minimum pool size before auto-creating
+    auto_create_country = Column(String, default="us")    # country for new account phone numbers
+    auto_create_proxy_id = Column(Integer, ForeignKey("proxies.id"), nullable=True)  # proxy for new accounts
     schedule_start = Column(DateTime, nullable=True)
     schedule_end = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=now_utc)

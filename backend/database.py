@@ -27,10 +27,14 @@ def get_db():
 def _run_migrations():
     """Add new columns to existing tables without dropping data."""
     new_columns = [
-        ("accounts", "watch_style", "VARCHAR DEFAULT 'random'"),
-        ("accounts", "google_password", "VARCHAR"),
-        ("sessions", "dwell_seconds", "FLOAT DEFAULT 0.0"),
-        ("campaigns", "search_keywords", "VARCHAR"),
+        ("accounts",  "watch_style",           "VARCHAR DEFAULT 'random'"),
+        ("accounts",  "google_password",        "VARCHAR"),
+        ("sessions",  "dwell_seconds",          "FLOAT DEFAULT 0.0"),
+        ("campaigns", "search_keywords",        "VARCHAR"),
+        ("campaigns", "auto_create_accounts",   "BOOLEAN DEFAULT 0"),
+        ("campaigns", "min_accounts",           "INTEGER DEFAULT 1"),
+        ("campaigns", "auto_create_country",    "VARCHAR DEFAULT 'us'"),
+        ("campaigns", "auto_create_proxy_id",   "INTEGER"),
     ]
     with engine.connect() as conn:
         for table, column, col_def in new_columns:

@@ -19,6 +19,7 @@ from automation.browser import get_page
 from automation.warmup import warmup_session
 from automation.watcher import pick_watch_duration, navigate_to_video, watch_video
 from automation.relogin import ensure_logged_in
+from automation.provisioner import ensure_pool
 
 logger = logging.getLogger("viewforge.engine")
 
@@ -137,7 +138,16 @@ async def _run_campaign(campaign_id: int):
         _db_log(db, f"Campaign '{campaign.name}' started", "info",
                 campaign_id=campaign_id)
 
-        account_ids: list = campaign.account_ids or []
+        account_ids: list = list(campaign.account_ids or [])
+
+        # ── Auto-provision if pool is empty or below minimum ──────────────────
+        if campaign.auto_create_accounts:
+            def _log(msg, level="info"):
+                _db_log(db, msg, level, campaign_id=campaign_id)
+
+            new_ids = await ensure_pool(campaign, db, _log)
+            account_ids = list(campaign.account_ids or [])  # refresh after provisioning
+
         if not account_ids:
             _db_log(db, "No accounts assigned to this campaign", "warning",
                     campaign_id=campaign_id)
@@ -187,11 +197,29 @@ async def _run_campaign(campaign_id: int):
                 # Does not count toward completed — just burns some activity safely
 
             # Pick a random eligible account
+            account_ids = list(campaign.account_ids or [])  # keep in sync
             account = _pick_account(db, account_ids, campaign)
             if not account:
-                _db_log(db, "All accounts at daily limit or busy — waiting 30 min",
-                        "info", campaign_id=campaign_id)
-                await asyncio.sleep(30 * 60)
+                if campaign.auto_create_accounts:
+                    _db_log(
+                        db,
+                        "All accounts at daily limit — auto-creating more accounts…",
+                        "info", campaign_id=campaign_id,
+                    )
+                    def _log(msg, level="info"):
+                        _db_log(db, msg, level, campaign_id=campaign_id)
+
+                    new_ids = await ensure_pool(campaign, db, _log)
+                    account_ids = list(campaign.account_ids or [])
+                    if not new_ids:
+                        # Provisioning failed or no SMS config — fall back to waiting
+                        _db_log(db, "Could not provision new accounts — waiting 30 min",
+                                "warning", campaign_id=campaign_id)
+                        await asyncio.sleep(30 * 60)
+                else:
+                    _db_log(db, "All accounts at daily limit or busy — waiting 30 min",
+                            "info", campaign_id=campaign_id)
+                    await asyncio.sleep(30 * 60)
                 continue
 
             success = await _run_session(db, account, campaign)
