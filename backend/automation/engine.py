@@ -18,6 +18,7 @@ import models
 from automation.browser import get_page
 from automation.warmup import warmup_session
 from automation.watcher import pick_watch_duration, navigate_to_video, watch_video
+from automation.relogin import ensure_logged_in
 
 logger = logging.getLogger("viewforge.engine")
 
@@ -254,6 +255,11 @@ async def _run_session(db: DBSession, account: models.Account, campaign: models.
         db.commit()
 
         page = await get_page(account)
+
+        # Verify Google session is still valid; re-login if cookies expired
+        logged_in = await ensure_logged_in(page, account, log_cb=log)
+        if not logged_in:
+            raise Exception("Could not verify signed-in state — skipping session")
 
         # Warm-up (counts toward the 90-min session budget)
         session_start = time.monotonic()

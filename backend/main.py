@@ -19,6 +19,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from database import init_db
 from routers import accounts, proxies, campaigns, logs, stats, auth
 from automation.engine import set_broadcast_callback
+import broadcast as _broadcast_module
 
 
 # ── WebSocket connection manager ──────────────────────────────────────────────
@@ -77,8 +78,9 @@ async def lifespan(app: FastAPI):
     init_db()
     os.makedirs(os.getenv("PROFILES_DIR", "./profiles"), exist_ok=True)
 
-    # Register WebSocket log broadcaster
+    # Register WebSocket log broadcaster (engine + account creator)
     set_broadcast_callback(broadcast_log)
+    _broadcast_module.set_fn(broadcast_log)
 
     # Scheduler: reset daily counts at midnight
     scheduler.add_job(_daily_reset, "cron", hour=0, minute=0)

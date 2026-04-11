@@ -41,6 +41,7 @@ class Account(Base):
     email = Column(String, unique=True, nullable=False)
     profile_dir = Column(String, nullable=True)           # path to Playwright profile
     cookie_data = Column(Text, nullable=True)             # JSON cookie string
+    google_password = Column(String, nullable=True)        # stored for auto re-login
     proxy_id = Column(Integer, ForeignKey("proxies.id"), nullable=True)
     status = Column(String, default="idle")               # idle, running, cooldown, error
     watch_style = Column(String, default="random")        # random, short, medium, long

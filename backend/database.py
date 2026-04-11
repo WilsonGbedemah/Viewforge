@@ -28,6 +28,7 @@ def _run_migrations():
     """Add new columns to existing tables without dropping data."""
     new_columns = [
         ("accounts", "watch_style", "VARCHAR DEFAULT 'random'"),
+        ("accounts", "google_password", "VARCHAR"),
         ("sessions", "dwell_seconds", "FLOAT DEFAULT 0.0"),
         ("campaigns", "search_keywords", "VARCHAR"),
     ]

@@ -43,15 +43,27 @@ class AccountBase(BaseModel):
 
 class AccountCreate(AccountBase):
     cookie_data: Optional[str] = None
+    google_password: Optional[str] = None
 
 class AccountUpdate(BaseModel):
     label: Optional[str] = None
     email: Optional[str] = None
     proxy_id: Optional[int] = None
     cookie_data: Optional[str] = None
+    google_password: Optional[str] = None
     watch_style: Optional[str] = None
     notes: Optional[str] = None
     status: Optional[str] = None
+
+class AutoCreateRequest(BaseModel):
+    label: str
+    proxy_id: Optional[int] = None
+    watch_style: str = "random"
+    country: str = "us"
+
+class AutoCreateResponse(BaseModel):
+    creation_id: str
+    message: str
 
 class AccountOut(AccountBase):
     id: int

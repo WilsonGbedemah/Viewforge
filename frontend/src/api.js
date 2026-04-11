@@ -38,6 +38,8 @@ export const api = {
   updateAccount: (id, d) => req('PATCH', `/accounts/${id}`, d),
   deleteAccount: (id) => req('DELETE', `/accounts/${id}`),
   resetAccountDaily: (id) => req('POST', `/accounts/${id}/reset-daily`),
+  autoCreateAccount: (d) => req('POST', '/accounts/auto-create', d),
+  getCreationStatus: (id) => req('GET', `/accounts/auto-create-status/${id}`),
 
   // Proxies
   listProxies: () => req('GET', '/proxies/'),
