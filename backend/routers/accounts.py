@@ -18,6 +18,10 @@ PROFILES_DIR = os.getenv("PROFILES_DIR", "./profiles")
 # { creation_id: {"status": pending|running|success|failed, "account_id": int|None, "error": str|None} }
 _creation_jobs: Dict[str, dict] = {}
 
+# Queues for manual SMS mode — frontend POSTs phone/code values into these
+# { creation_id: asyncio.Queue }
+_manual_input_queues: Dict[str, asyncio.Queue] = {}
+
 
 @router.get("/", response_model=List[schemas.AccountOut])
 def list_accounts(db: Session = Depends(get_db)):
@@ -119,6 +123,28 @@ def get_creation_status(creation_id: str):
     return job
 
 
+class ManualInputPayload(schemas.BaseModel if hasattr(schemas, "BaseModel") else object):
+    value: str   # phone number OR otp code
+
+
+from pydantic import BaseModel as _BM
+class ManualInputPayload(_BM):
+    value: str
+
+
+@router.post("/auto-create-input/{creation_id}")
+async def submit_manual_input(creation_id: str, data: ManualInputPayload):
+    """
+    Send a phone number or SMS code to a paused manual-mode creation job.
+    The background task is blocked on its asyncio.Queue waiting for this.
+    """
+    q = _manual_input_queues.get(creation_id)
+    if not q:
+        raise HTTPException(status_code=404, detail="No pending input for this creation job")
+    await q.put(data.value.strip())
+    return {"ok": True}
+
+
 # ── Background creation task ──────────────────────────────────────────────────
 
 def _msg_to_step(msg: str) -> int:
@@ -152,6 +178,7 @@ def _emit(creation_id: str, msg: str, step: int = None, status: str = "running",
 
 async def _run_creation(creation_id: str, data: schemas.AutoCreateRequest):
     from automation.account_creator import AccountCreator
+    from automation.sms_providers import get_sms_provider, ManualSMSProvider
 
     _creation_jobs[creation_id]["status"] = "running"
     _emit(creation_id, "Starting account creation…", step=1)
@@ -170,6 +197,25 @@ async def _run_creation(creation_id: str, data: schemas.AutoCreateRequest):
 
         profiles_dir = os.getenv("PROFILES_DIR", "./profiles")
 
+        # Determine SMS provider — fall back to manual (free) mode if no API key set
+        sms_provider = get_sms_provider()
+        if sms_provider is None:
+            q = asyncio.Queue()
+            _manual_input_queues[creation_id] = q
+
+            def _manual_emit(msg, status, **extra):
+                _emit(creation_id, msg, step=4, status=status, **extra)
+
+            sms_provider = ManualSMSProvider(creation_id, q, _manual_emit)
+            _emit(
+                creation_id,
+                "No SMS API configured — running in manual mode. "
+                "You will be asked to provide a phone number and OTP code.",
+                step=1,
+                status="running",
+                manual_mode=True,
+            )
+
         def log_cb(msg: str, level: str = "info"):
             _emit(creation_id, msg)
 
@@ -177,6 +223,7 @@ async def _run_creation(creation_id: str, data: schemas.AutoCreateRequest):
             proxy            = proxy,
             profile_base_dir = profiles_dir,
             log_cb           = log_cb,
+            sms_provider     = sms_provider,
         )
         result = await creator.create(country=data.country)
 
@@ -229,3 +276,5 @@ async def _run_creation(creation_id: str, data: schemas.AutoCreateRequest):
         err = str(exc)
         _creation_jobs[creation_id].update({"status": "failed", "error": err})
         _emit(creation_id, f"Creation failed: {err}", step=None, status="failed")
+    finally:
+        _manual_input_queues.pop(creation_id, None)

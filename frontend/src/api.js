@@ -40,6 +40,7 @@ export const api = {
   resetAccountDaily: (id) => req('POST', `/accounts/${id}/reset-daily`),
   autoCreateAccount: (d) => req('POST', '/accounts/auto-create', d),
   getCreationStatus: (id) => req('GET', `/accounts/auto-create-status/${id}`),
+  submitCreationInput: (id, value) => req('POST', `/accounts/auto-create-input/${id}`, { value }),
 
   // Proxies
   listProxies: () => req('GET', '/proxies/'),

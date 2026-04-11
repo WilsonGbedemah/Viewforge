@@ -162,10 +162,12 @@ class AccountCreator:
         proxy=None,
         profile_base_dir: str = "./profiles",
         log_cb: Optional[Callable] = None,
+        sms_provider=None,
     ):
         self.proxy            = proxy
         self.profile_base_dir = profile_base_dir
         self._log_cb          = log_cb or (lambda msg, level="info": None)
+        self._sms_provider    = sms_provider  # injected; None = auto-detect
 
     def log(self, msg: str, level: str = "info"):
         self._log_cb(msg, level)
@@ -173,11 +175,12 @@ class AccountCreator:
     # ── Public entry point ────────────────────────────────────────────────────
 
     async def create(self, country: str = "us") -> AccountCreationResult:
-        provider = get_sms_provider()
+        provider = self._sms_provider or get_sms_provider()
         if not provider:
             raise AccountCreationError(
                 "No SMS provider configured. "
-                "Set SMS_PROVIDER and SMS_API_KEY in your .env file."
+                "Set SMS_PROVIDER and SMS_API_KEY in your .env file, "
+                "or use manual mode (leave SMS keys unset)."
             )
 
         details = generate_account_details()

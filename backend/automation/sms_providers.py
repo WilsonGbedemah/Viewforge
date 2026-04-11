@@ -193,6 +193,65 @@ class SmsActivateProvider(SMSProvider):
                 pass
 
 
+# ── Manual (test) provider ────────────────────────────────────────────────────
+
+class ManualSMSProvider(SMSProvider):
+    """
+    No-cost provider for testing.
+
+    Instead of calling an API it pauses the automation and emits WebSocket
+    events asking the operator to supply a real phone number and OTP code
+    through the UI progress modal.
+
+    Requires a creation_id and an asyncio.Queue that the HTTP endpoint
+    writes into when the user submits input.
+    """
+
+    def __init__(self, creation_id: str, input_queue: asyncio.Queue, emit_fn):
+        self.creation_id = creation_id
+        self.queue       = input_queue
+        self._emit       = emit_fn   # callable(msg, status, **extra)
+
+    async def get_number(self, country: str) -> Tuple[str, str]:
+        """Ask the UI for a real phone number. Returns ("manual", phone)."""
+        self._emit(
+            "Enter a phone number to use for verification",
+            "waiting_phone",
+            prompt_type="phone",
+            hint=f"Use a real SIM card number for {country.upper()}. Google will send an SMS to it.",
+        )
+        # Wait for the UI to POST the phone number
+        phone = await asyncio.wait_for(self.queue.get(), timeout=300)
+        if not phone.startswith("+"):
+            phone = "+" + phone
+        return "manual", phone
+
+    async def get_code(self, activation_id: str) -> Optional[str]:
+        # Not used in manual mode — wait_for_code is overridden below
+        return None
+
+    async def wait_for_code(
+        self,
+        activation_id: str,
+        timeout: int = 300,
+        poll_interval: int = 5,
+    ) -> str:
+        """Ask the UI for the OTP code that arrived on the user's phone."""
+        self._emit(
+            "Check your phone for the SMS code and enter it below",
+            "waiting_code",
+            prompt_type="code",
+        )
+        code = await asyncio.wait_for(self.queue.get(), timeout=timeout)
+        return code.strip()
+
+    async def cancel(self, activation_id: str) -> None:
+        pass  # nothing to cancel
+
+    async def confirm(self, activation_id: str) -> None:
+        pass  # nothing to confirm
+
+
 # ── Factory ───────────────────────────────────────────────────────────────────
 
 def get_sms_provider() -> Optional[SMSProvider]:

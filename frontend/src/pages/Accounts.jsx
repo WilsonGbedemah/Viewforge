@@ -40,8 +40,10 @@ export default function Accounts() {
   const [error,    setError]    = useState('')
   const [loading,  setLoading]  = useState(false)
 
-  // Auto-creation progress: { id, step, status, message, email }
-  const [creation, setCreation] = useState(null)
+  // Auto-creation progress: { id, step, status, message, email, prompt_type, hint, manual_mode }
+  const [creation,   setCreation]   = useState(null)
+  const [manualInput, setManualInput] = useState('')
+  const [inputLoading, setInputLoading] = useState(false)
   const wsRef = useRef(null)
 
   const load = async () => {
@@ -58,12 +60,17 @@ export default function Accounts() {
       if (msg.type !== 'account_creation') return
       setCreation(prev => ({
         ...prev,
-        step:    msg.step    ?? prev?.step,
-        status:  msg.status  ?? prev?.status,
-        message: msg.message,
-        email:   msg.email   ?? prev?.email,
+        step:        msg.step        ?? prev?.step,
+        status:      msg.status      ?? prev?.status,
+        message:     msg.message,
+        email:       msg.email       ?? prev?.email,
+        prompt_type: msg.prompt_type ?? null,   // 'phone' | 'code' | null
+        hint:        msg.hint        ?? prev?.hint,
+        manual_mode: msg.manual_mode ?? prev?.manual_mode,
       }))
       if (msg.status === 'success') load()
+      // Clear input field when a new prompt arrives
+      if (msg.prompt_type) setManualInput('')
     })
     wsRef.current = ws
     return () => { try { ws.close() } catch (_) {} }
@@ -109,6 +116,19 @@ export default function Accounts() {
       setModal('progress')
     } catch (e) { setError(e.message) }
     setLoading(false)
+  }
+
+  const handleManualSubmit = async () => {
+    if (!manualInput.trim() || !creation?.id) return
+    setInputLoading(true)
+    try {
+      await api.submitCreationInput(creation.id, manualInput.trim())
+      setManualInput('')
+      setCreation(prev => ({ ...prev, prompt_type: null }))
+    } catch (e) {
+      // leave input visible so user can retry
+    }
+    setInputLoading(false)
   }
 
   const handleDelete = async (id) => {
@@ -243,9 +263,9 @@ export default function Accounts() {
         <Modal title="Auto-Create Google Account" onClose={() => setModal(null)}>
           <div className="space-y-4">
             <p className="text-forge-dim text-xs font-mono leading-relaxed">
-              Opens a real browser and creates a Google account automatically.
-              Requires <span className="text-forge-amber">SMS_PROVIDER</span> and{' '}
-              <span className="text-forge-amber">SMS_API_KEY</span> set in your <code>.env</code>.
+              Opens a real browser and walks through the full Google signup flow
+              automatically. If no SMS API key is configured, you will be prompted
+              to enter a phone number and code manually during the process.
             </p>
             <div>
               <label className="text-xs font-mono text-forge-dim mb-1 block">Account Label</label>
@@ -290,52 +310,128 @@ export default function Accounts() {
       {/* ── Creation Progress Modal ── */}
       {modal === 'progress' && creation && (
         <Modal
-          title="Creating Google Account"
+          title={creation.manual_mode ? 'Creating Account — Manual Mode' : 'Creating Google Account'}
           onClose={creationDone ? () => { setModal(null); setCreation(null) } : null}
         >
           <div className="space-y-5">
+
+            {/* Manual mode banner */}
+            {creation.manual_mode && !creationDone && (
+              <div className="bg-forge-amber/10 border border-forge-amber/30 rounded px-3 py-2 text-xs font-mono text-forge-amber">
+                Manual mode — the browser is running. You will be asked to provide
+                a phone number and SMS code when the verification step is reached.
+              </div>
+            )}
+
             {/* Step tracker */}
             <div className="space-y-2">
               {STEPS.map(s => {
-                const done    = creation.step > s.n
-                const active  = creation.step === s.n && !creationDone
-                const failed  = creationFailed && creation.step === s.n
+                const waiting = creation.step === s.n &&
+                  (creation.status === 'waiting_phone' || creation.status === 'waiting_code')
+                const done   = creation.step > s.n
+                const active = creation.step === s.n && !creationDone && !waiting
+                const failed = creationFailed && creation.step === s.n
                 return (
                   <div key={s.n} className="flex items-center gap-3">
                     <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs font-bold transition-colors ${
-                      done    ? 'bg-forge-green/20 text-forge-green' :
-                      failed  ? 'bg-forge-red/20 text-forge-red' :
-                      active  ? 'bg-forge-amber/20 text-forge-amber' :
-                                'bg-forge-muted text-forge-dim'
+                      done    ? 'bg-forge-green/20  text-forge-green' :
+                      failed  ? 'bg-forge-red/20    text-forge-red'   :
+                      waiting ? 'bg-forge-amber/20  text-forge-amber' :
+                      active  ? 'bg-forge-amber/20  text-forge-amber' :
+                                'bg-forge-muted     text-forge-dim'
                     }`}>
-                      {done   ? <CheckCircle2 size={14} /> :
-                       failed ? <XCircle size={14} /> :
-                       active ? <Loader2 size={12} className="animate-spin" /> :
-                                s.n}
+                      {done    ? <CheckCircle2 size={14} /> :
+                       failed  ? <XCircle size={14} /> :
+                       waiting ? '?' :
+                       active  ? <Loader2 size={12} className="animate-spin" /> :
+                                 s.n}
                     </div>
                     <span className={`text-sm ${
-                      done   ? 'text-forge-dim line-through' :
-                      active ? 'text-forge-text font-medium' :
-                               'text-forge-dim'
+                      done    ? 'text-forge-dim line-through' :
+                      waiting ? 'text-forge-amber font-medium' :
+                      active  ? 'text-forge-text  font-medium' :
+                                'text-forge-dim'
                     }`}>
                       {s.label}
+                      {waiting && <span className="ml-2 text-forge-amber/70 text-xs">(waiting for input)</span>}
                     </span>
                   </div>
                 )
               })}
             </div>
 
-            {/* Live message */}
+            {/* Live log message */}
             <div className="bg-forge-muted/40 rounded px-3 py-2 font-mono text-xs text-forge-dim min-h-[2.5rem]">
               {creation.message}
             </div>
 
-            {/* Done states */}
+            {/* ── Manual input: phone number ── */}
+            {creation.status === 'waiting_phone' && (
+              <div className="space-y-2 border border-forge-amber/30 rounded p-3 bg-forge-amber/5">
+                <p className="text-forge-amber text-xs font-mono font-semibold">
+                  Enter a phone number for verification
+                </p>
+                {creation.hint && (
+                  <p className="text-forge-dim text-xs font-mono">{creation.hint}</p>
+                )}
+                <div className="flex gap-2">
+                  <input
+                    className="flex-1 px-3 py-2 text-sm font-mono"
+                    placeholder="+1 555 000 0000"
+                    value={manualInput}
+                    onChange={e => setManualInput(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleManualSubmit()}
+                    autoFocus
+                  />
+                  <button
+                    className="btn-primary px-4"
+                    onClick={handleManualSubmit}
+                    disabled={inputLoading || !manualInput.trim()}
+                  >
+                    {inputLoading ? <Loader2 size={14} className="animate-spin" /> : 'Submit'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ── Manual input: SMS code ── */}
+            {creation.status === 'waiting_code' && (
+              <div className="space-y-2 border border-forge-amber/30 rounded p-3 bg-forge-amber/5">
+                <p className="text-forge-amber text-xs font-mono font-semibold">
+                  Enter the SMS verification code
+                </p>
+                <p className="text-forge-dim text-xs font-mono">
+                  Check the phone you provided — Google sent a 6-digit code.
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    className="flex-1 px-3 py-2 text-sm font-mono tracking-widest"
+                    placeholder="123456"
+                    maxLength={8}
+                    value={manualInput}
+                    onChange={e => setManualInput(e.target.value.replace(/\D/g, ''))}
+                    onKeyDown={e => e.key === 'Enter' && handleManualSubmit()}
+                    autoFocus
+                  />
+                  <button
+                    className="btn-primary px-4"
+                    onClick={handleManualSubmit}
+                    disabled={inputLoading || !manualInput.trim()}
+                  >
+                    {inputLoading ? <Loader2 size={14} className="animate-spin" /> : 'Submit'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Success */}
             {creation.status === 'success' && (
               <div className="bg-forge-green/10 border border-forge-green/30 rounded px-3 py-2 text-xs font-mono text-forge-green">
                 Account created: {creation.email}
               </div>
             )}
+
+            {/* Failure */}
             {creationFailed && (
               <div className="bg-forge-red/10 border border-forge-red/30 rounded px-3 py-2 text-xs font-mono text-forge-red">
                 {creation.message}
