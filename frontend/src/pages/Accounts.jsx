@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
-import { api, connectLogStream } from '../api'
+import { useEffect, useState } from 'react'
+import { api } from '../api'
 import Badge from '../components/Badge'
 import Modal from '../components/Modal'
-import { Plus, Trash2, RefreshCw, Edit2, Sparkles, CheckCircle2, XCircle, Loader2 } from 'lucide-react'
+import { Plus, Trash2, RefreshCw, Edit2 } from 'lucide-react'
 
-const EMPTY      = { label: '', email: '', proxy_id: '', watch_style: 'random', notes: '', cookie_data: '' }
-const AUTO_EMPTY = { label: '', proxy_id: '', watch_style: 'random', country: 'us' }
+const ACCOUNT_EMPTY = { label: '', email: '', proxy_id: '', watch_style: 'random', notes: '' }
+const PROXY_EMPTY   = { label: '', host: '', port: '', username: '', password: '', protocol: 'http' }
 
 const WATCH_STYLES = [
   { value: 'random', label: 'Random (weighted mix)' },
@@ -13,38 +13,16 @@ const WATCH_STYLES = [
   { value: 'medium', label: 'Medium viewer' },
   { value: 'long',   label: 'Long viewer (mostly full)' },
 ]
-const COUNTRIES = [
-  { value: 'us', label: 'United States' },
-  { value: 'gb', label: 'United Kingdom' },
-  { value: 'ca', label: 'Canada' },
-  { value: 'au', label: 'Australia' },
-  { value: 'de', label: 'Germany' },
-  { value: 'fr', label: 'France' },
-]
-const STEPS = [
-  { n: 1, label: 'Generating identity'  },
-  { n: 2, label: 'Opening browser'      },
-  { n: 3, label: 'Filling signup form'  },
-  { n: 4, label: 'Phone verification'   },
-  { n: 5, label: 'Accepting terms'      },
-  { n: 6, label: 'Saving account'       },
-]
 
 export default function Accounts() {
   const [accounts, setAccounts] = useState([])
   const [proxies,  setProxies]  = useState([])
-  const [modal,    setModal]    = useState(null)   // null | 'add' | 'edit' | 'proxy' | 'auto' | 'progress'
-  const [form,     setForm]     = useState(EMPTY)
-  const [autoForm, setAutoForm] = useState(AUTO_EMPTY)
+  const [modal,    setModal]    = useState(null)   // null | 'edit' | 'proxy'
+  const [accForm,  setAccForm]  = useState(ACCOUNT_EMPTY)
+  const [proxyForm, setProxyForm] = useState(PROXY_EMPTY)
   const [selected, setSelected] = useState(null)
   const [error,    setError]    = useState('')
   const [loading,  setLoading]  = useState(false)
-
-  // Auto-creation progress: { id, step, status, message, email, prompt_type, hint, manual_mode }
-  const [creation,   setCreation]   = useState(null)
-  const [manualInput, setManualInput] = useState('')
-  const [inputLoading, setInputLoading] = useState(false)
-  const wsRef = useRef(null)
 
   const load = async () => {
     const [a, p] = await Promise.all([api.listAccounts(), api.listProxies()])
@@ -54,81 +32,33 @@ export default function Accounts() {
 
   useEffect(() => { load() }, [])
 
-  // WebSocket — listen for account_creation progress events
-  useEffect(() => {
-    const ws = connectLogStream((msg) => {
-      if (msg.type !== 'account_creation') return
-      setCreation(prev => ({
-        ...prev,
-        step:        msg.step        ?? prev?.step,
-        status:      msg.status      ?? prev?.status,
-        message:     msg.message,
-        email:       msg.email       ?? prev?.email,
-        prompt_type: msg.prompt_type ?? null,   // 'phone' | 'code' | null
-        hint:        msg.hint        ?? prev?.hint,
-        manual_mode: msg.manual_mode ?? prev?.manual_mode,
-      }))
-      if (msg.status === 'success') load()
-      // Clear input field when a new prompt arrives
-      if (msg.prompt_type) setManualInput('')
-    })
-    wsRef.current = ws
-    return () => { try { ws.close() } catch (_) {} }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
   // ── Handlers ──
-  const openAdd   = () => { setForm(EMPTY); setError(''); setModal('add') }
-  const openAuto  = () => { setAutoForm(AUTO_EMPTY); setError(''); setModal('auto') }
-  const openEdit  = (acc) => {
+  const openEdit = (acc) => {
     setSelected(acc)
-    setForm({ label: acc.label, email: acc.email, proxy_id: acc.proxy_id || '',
-              watch_style: acc.watch_style || 'random', notes: acc.notes || '', cookie_data: '' })
+    setAccForm({
+      label:       acc.label,
+      email:       acc.email,
+      proxy_id:    acc.proxy_id || '',
+      watch_style: acc.watch_style || 'random',
+      notes:       acc.notes || '',
+    })
     setError('')
     setModal('edit')
   }
-  const openProxy = () => { setForm(EMPTY); setError(''); setModal('proxy') }
 
-  const handleSave = async () => {
+  const openProxy = () => { setProxyForm(PROXY_EMPTY); setError(''); setModal('proxy') }
+
+  const handleEditSave = async () => {
     setLoading(true); setError('')
     try {
-      const payload = { ...form, proxy_id: form.proxy_id ? Number(form.proxy_id) : null }
-      if (!payload.cookie_data) delete payload.cookie_data
-      if (modal === 'add') await api.createAccount(payload)
-      else                 await api.updateAccount(selected.id, payload)
+      await api.updateAccount(selected.id, {
+        ...accForm,
+        proxy_id: accForm.proxy_id ? Number(accForm.proxy_id) : null,
+      })
       setModal(null)
       await load()
     } catch (e) { setError(e.message) }
     setLoading(false)
-  }
-
-  const handleAutoCreate = async () => {
-    if (!autoForm.label.trim()) { setError('Label is required'); return }
-    setLoading(true); setError('')
-    try {
-      const payload = {
-        label:       autoForm.label.trim(),
-        proxy_id:    autoForm.proxy_id ? Number(autoForm.proxy_id) : null,
-        watch_style: autoForm.watch_style,
-        country:     autoForm.country,
-      }
-      const res = await api.autoCreateAccount(payload)
-      setCreation({ id: res.creation_id, step: 1, status: 'running', message: 'Starting…', email: null })
-      setModal('progress')
-    } catch (e) { setError(e.message) }
-    setLoading(false)
-  }
-
-  const handleManualSubmit = async () => {
-    if (!manualInput.trim() || !creation?.id) return
-    setInputLoading(true)
-    try {
-      await api.submitCreationInput(creation.id, manualInput.trim())
-      setManualInput('')
-      setCreation(prev => ({ ...prev, prompt_type: null }))
-    } catch (e) {
-      // leave input visible so user can retry
-    }
-    setInputLoading(false)
   }
 
   const handleDelete = async (id) => {
@@ -146,9 +76,12 @@ export default function Accounts() {
     setLoading(true); setError('')
     try {
       await api.createProxy({
-        label: form.label, host: form.host, port: Number(form.port),
-        username: form.username || null, password: form.password || null,
-        protocol: form.protocol || 'http',
+        label:    proxyForm.label,
+        host:     proxyForm.host,
+        port:     Number(proxyForm.port),
+        username: proxyForm.username || null,
+        password: proxyForm.password || null,
+        protocol: proxyForm.protocol || 'http',
       })
       setModal(null)
       await load()
@@ -156,12 +89,8 @@ export default function Accounts() {
     setLoading(false)
   }
 
-  const f  = (k) => (e) => setForm(p => ({ ...p, [k]: e.target.value }))
-  const af = (k) => (e) => setAutoForm(p => ({ ...p, [k]: e.target.value }))
-
-  // ── Progress modal helpers ──
-  const creationDone   = creation?.status === 'success' || creation?.status === 'failed'
-  const creationFailed = creation?.status === 'failed'
+  const af = (k) => (e) => setAccForm(p => ({ ...p, [k]: e.target.value }))
+  const pf = (k) => (e) => setProxyForm(p => ({ ...p, [k]: e.target.value }))
 
   return (
     <div className="p-6 space-y-5 animate-fade-in">
@@ -172,17 +101,9 @@ export default function Accounts() {
           <h1 className="text-2xl font-bold text-forge-text">Accounts</h1>
           <p className="text-forge-dim text-sm font-mono mt-0.5">{accounts.length} registered</p>
         </div>
-        <div className="flex gap-2">
-          <button className="btn-ghost" onClick={openProxy}>
-            <span className="flex items-center gap-1.5"><Plus size={14} />Add Proxy</span>
-          </button>
-          <button className="btn-ghost" onClick={openAuto}>
-            <span className="flex items-center gap-1.5"><Sparkles size={14} />Auto-Create Account</span>
-          </button>
-          <button className="btn-primary" onClick={openAdd}>
-            <span className="flex items-center gap-1.5"><Plus size={14} />Add Account</span>
-          </button>
-        </div>
+        <button className="btn-ghost" onClick={openProxy}>
+          <span className="flex items-center gap-1.5"><Plus size={14} />Add Proxy</span>
+        </button>
       </div>
 
       {/* Proxy strip */}
@@ -221,7 +142,11 @@ export default function Accounts() {
           </thead>
           <tbody>
             {accounts.length === 0 && (
-              <tr><td colSpan={8} className="text-center text-forge-dim py-10 font-mono text-sm">No accounts yet</td></tr>
+              <tr>
+                <td colSpan={8} className="text-center text-forge-dim py-10 font-mono text-sm">
+                  No accounts yet — accounts are created automatically when a campaign runs
+                </td>
+              </tr>
             )}
             {accounts.map(acc => (
               <tr key={acc.id} className="border-b border-forge-border/50 hover:bg-forge-muted/30 transition-colors">
@@ -258,236 +183,34 @@ export default function Accounts() {
         </table>
       </div>
 
-      {/* ── Auto-Create Account Modal ── */}
-      {modal === 'auto' && (
-        <Modal title="Auto-Create Google Account" onClose={() => setModal(null)}>
-          <div className="space-y-4">
-            <p className="text-forge-dim text-xs font-mono leading-relaxed">
-              Opens a real browser and walks through the full Google signup flow
-              automatically. If no SMS API key is configured, you will be prompted
-              to enter a phone number and code manually during the process.
-            </p>
-            <div>
-              <label className="text-xs font-mono text-forge-dim mb-1 block">Account Label</label>
-              <input className="w-full px-3 py-2 text-sm" placeholder="e.g. Account 05"
-                value={autoForm.label} onChange={af('label')} autoFocus />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-mono text-forge-dim mb-1 block">Country (for phone number)</label>
-                <select className="w-full px-3 py-2 text-sm" value={autoForm.country} onChange={af('country')}>
-                  {COUNTRIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs font-mono text-forge-dim mb-1 block">Viewing Style</label>
-                <select className="w-full px-3 py-2 text-sm" value={autoForm.watch_style} onChange={af('watch_style')}>
-                  {WATCH_STYLES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-                </select>
-              </div>
-            </div>
-            <div>
-              <label className="text-xs font-mono text-forge-dim mb-1 block">Proxy (optional)</label>
-              <select className="w-full px-3 py-2 text-sm" value={autoForm.proxy_id} onChange={af('proxy_id')}>
-                <option value="">— None —</option>
-                {proxies.map(p => <option key={p.id} value={p.id}>{p.label} ({p.host}:{p.port})</option>)}
-              </select>
-            </div>
-            {error && <p className="text-forge-red text-xs font-mono">{error}</p>}
-            <div className="flex gap-2 pt-1">
-              <button className="btn-primary flex-1" onClick={handleAutoCreate} disabled={loading}>
-                <span className="flex items-center justify-center gap-1.5">
-                  {loading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                  {loading ? 'Starting…' : 'Create Account Automatically'}
-                </span>
-              </button>
-              <button className="btn-ghost" onClick={() => setModal(null)}>Cancel</button>
-            </div>
-          </div>
-        </Modal>
-      )}
-
-      {/* ── Creation Progress Modal ── */}
-      {modal === 'progress' && creation && (
-        <Modal
-          title={creation.manual_mode ? 'Creating Account — Manual Mode' : 'Creating Google Account'}
-          onClose={creationDone ? () => { setModal(null); setCreation(null) } : null}
-        >
-          <div className="space-y-5">
-
-            {/* Manual mode banner */}
-            {creation.manual_mode && !creationDone && (
-              <div className="bg-forge-amber/10 border border-forge-amber/30 rounded px-3 py-2 text-xs font-mono text-forge-amber">
-                Manual mode — the browser is running. You will be asked to provide
-                a phone number and SMS code when the verification step is reached.
-              </div>
-            )}
-
-            {/* Step tracker */}
-            <div className="space-y-2">
-              {STEPS.map(s => {
-                const waiting = creation.step === s.n &&
-                  (creation.status === 'waiting_phone' || creation.status === 'waiting_code')
-                const done   = creation.step > s.n
-                const active = creation.step === s.n && !creationDone && !waiting
-                const failed = creationFailed && creation.step === s.n
-                return (
-                  <div key={s.n} className="flex items-center gap-3">
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs font-bold transition-colors ${
-                      done    ? 'bg-forge-green/20  text-forge-green' :
-                      failed  ? 'bg-forge-red/20    text-forge-red'   :
-                      waiting ? 'bg-forge-amber/20  text-forge-amber' :
-                      active  ? 'bg-forge-amber/20  text-forge-amber' :
-                                'bg-forge-muted     text-forge-dim'
-                    }`}>
-                      {done    ? <CheckCircle2 size={14} /> :
-                       failed  ? <XCircle size={14} /> :
-                       waiting ? '?' :
-                       active  ? <Loader2 size={12} className="animate-spin" /> :
-                                 s.n}
-                    </div>
-                    <span className={`text-sm ${
-                      done    ? 'text-forge-dim line-through' :
-                      waiting ? 'text-forge-amber font-medium' :
-                      active  ? 'text-forge-text  font-medium' :
-                                'text-forge-dim'
-                    }`}>
-                      {s.label}
-                      {waiting && <span className="ml-2 text-forge-amber/70 text-xs">(waiting for input)</span>}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-
-            {/* Live log message */}
-            <div className="bg-forge-muted/40 rounded px-3 py-2 font-mono text-xs text-forge-dim min-h-[2.5rem]">
-              {creation.message}
-            </div>
-
-            {/* ── Manual input: phone number ── */}
-            {creation.status === 'waiting_phone' && (
-              <div className="space-y-2 border border-forge-amber/30 rounded p-3 bg-forge-amber/5">
-                <p className="text-forge-amber text-xs font-mono font-semibold">
-                  Enter a phone number for verification
-                </p>
-                {creation.hint && (
-                  <p className="text-forge-dim text-xs font-mono">{creation.hint}</p>
-                )}
-                <div className="flex gap-2">
-                  <input
-                    className="flex-1 px-3 py-2 text-sm font-mono"
-                    placeholder="+1 555 000 0000"
-                    value={manualInput}
-                    onChange={e => setManualInput(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && handleManualSubmit()}
-                    autoFocus
-                  />
-                  <button
-                    className="btn-primary px-4"
-                    onClick={handleManualSubmit}
-                    disabled={inputLoading || !manualInput.trim()}
-                  >
-                    {inputLoading ? <Loader2 size={14} className="animate-spin" /> : 'Submit'}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* ── Manual input: SMS code ── */}
-            {creation.status === 'waiting_code' && (
-              <div className="space-y-2 border border-forge-amber/30 rounded p-3 bg-forge-amber/5">
-                <p className="text-forge-amber text-xs font-mono font-semibold">
-                  Enter the SMS verification code
-                </p>
-                <p className="text-forge-dim text-xs font-mono">
-                  Check the phone you provided — Google sent a 6-digit code.
-                </p>
-                <div className="flex gap-2">
-                  <input
-                    className="flex-1 px-3 py-2 text-sm font-mono tracking-widest"
-                    placeholder="123456"
-                    maxLength={8}
-                    value={manualInput}
-                    onChange={e => setManualInput(e.target.value.replace(/\D/g, ''))}
-                    onKeyDown={e => e.key === 'Enter' && handleManualSubmit()}
-                    autoFocus
-                  />
-                  <button
-                    className="btn-primary px-4"
-                    onClick={handleManualSubmit}
-                    disabled={inputLoading || !manualInput.trim()}
-                  >
-                    {inputLoading ? <Loader2 size={14} className="animate-spin" /> : 'Submit'}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Success */}
-            {creation.status === 'success' && (
-              <div className="bg-forge-green/10 border border-forge-green/30 rounded px-3 py-2 text-xs font-mono text-forge-green">
-                Account created: {creation.email}
-              </div>
-            )}
-
-            {/* Failure */}
-            {creationFailed && (
-              <div className="bg-forge-red/10 border border-forge-red/30 rounded px-3 py-2 text-xs font-mono text-forge-red">
-                {creation.message}
-              </div>
-            )}
-
-            {creationDone && (
-              <button className="btn-primary w-full" onClick={() => { setModal(null); setCreation(null) }}>
-                Close
-              </button>
-            )}
-          </div>
-        </Modal>
-      )}
-
-      {/* ── Add / Edit Account Modal ── */}
-      {(modal === 'add' || modal === 'edit') && (
-        <Modal title={modal === 'add' ? 'Add Account' : 'Edit Account'} onClose={() => setModal(null)}>
+      {/* ── Edit Account Modal ── */}
+      {modal === 'edit' && (
+        <Modal title="Edit Account" onClose={() => setModal(null)}>
           <div className="space-y-3">
             <div>
               <label className="text-xs font-mono text-forge-dim mb-1 block">Label</label>
-              <input className="w-full px-3 py-2 text-sm" placeholder="e.g. Account 01" value={form.label} onChange={f('label')} />
+              <input className="w-full px-3 py-2 text-sm" value={accForm.label} onChange={af('label')} />
             </div>
             <div>
-              <label className="text-xs font-mono text-forge-dim mb-1 block">Google Email</label>
-              <input className="w-full px-3 py-2 text-sm" placeholder="user@gmail.com" value={form.email} onChange={f('email')} />
-            </div>
-            <div>
-              <label className="text-xs font-mono text-forge-dim mb-1 block">Proxy (optional)</label>
-              <select className="w-full px-3 py-2 text-sm" value={form.proxy_id} onChange={f('proxy_id')}>
+              <label className="text-xs font-mono text-forge-dim mb-1 block">Proxy</label>
+              <select className="w-full px-3 py-2 text-sm" value={accForm.proxy_id} onChange={af('proxy_id')}>
                 <option value="">— None —</option>
                 {proxies.map(p => <option key={p.id} value={p.id}>{p.label} ({p.host}:{p.port})</option>)}
               </select>
             </div>
             <div>
               <label className="text-xs font-mono text-forge-dim mb-1 block">Viewing Style</label>
-              <select className="w-full px-3 py-2 text-sm" value={form.watch_style} onChange={f('watch_style')}>
+              <select className="w-full px-3 py-2 text-sm" value={accForm.watch_style} onChange={af('watch_style')}>
                 {WATCH_STYLES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-xs font-mono text-forge-dim mb-1 block">Cookie JSON (optional)</label>
-              <textarea
-                className="w-full px-3 py-2 text-xs font-mono h-24 resize-none"
-                placeholder='Paste exported cookies as JSON array…'
-                value={form.cookie_data}
-                onChange={f('cookie_data')}
-              />
-            </div>
-            <div>
               <label className="text-xs font-mono text-forge-dim mb-1 block">Notes</label>
-              <input className="w-full px-3 py-2 text-sm" placeholder="Optional notes" value={form.notes} onChange={f('notes')} />
+              <input className="w-full px-3 py-2 text-sm" placeholder="Optional notes" value={accForm.notes} onChange={af('notes')} />
             </div>
             {error && <p className="text-forge-red text-xs font-mono">{error}</p>}
             <div className="flex gap-2 pt-1">
-              <button className="btn-primary flex-1" onClick={handleSave} disabled={loading}>
+              <button className="btn-primary flex-1" onClick={handleEditSave} disabled={loading}>
                 {loading ? 'Saving…' : 'Save'}
               </button>
               <button className="btn-ghost" onClick={() => setModal(null)}>Cancel</button>
@@ -502,31 +225,31 @@ export default function Accounts() {
           <div className="space-y-3">
             <div>
               <label className="text-xs font-mono text-forge-dim mb-1 block">Label</label>
-              <input className="w-full px-3 py-2 text-sm" placeholder="e.g. US Proxy 1" value={form.label || ''} onChange={f('label')} />
+              <input className="w-full px-3 py-2 text-sm" placeholder="e.g. US Proxy 1" value={proxyForm.label} onChange={pf('label')} autoFocus />
             </div>
             <div className="grid grid-cols-3 gap-2">
               <div className="col-span-2">
                 <label className="text-xs font-mono text-forge-dim mb-1 block">Host</label>
-                <input className="w-full px-3 py-2 text-sm" placeholder="192.168.1.1" value={form.host || ''} onChange={f('host')} />
+                <input className="w-full px-3 py-2 text-sm" placeholder="192.168.1.1" value={proxyForm.host} onChange={pf('host')} />
               </div>
               <div>
                 <label className="text-xs font-mono text-forge-dim mb-1 block">Port</label>
-                <input className="w-full px-3 py-2 text-sm" type="number" placeholder="8080" value={form.port || ''} onChange={f('port')} />
+                <input className="w-full px-3 py-2 text-sm" type="number" placeholder="8080" value={proxyForm.port} onChange={pf('port')} />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="text-xs font-mono text-forge-dim mb-1 block">Username</label>
-                <input className="w-full px-3 py-2 text-sm" placeholder="Optional" value={form.username || ''} onChange={f('username')} />
+                <input className="w-full px-3 py-2 text-sm" placeholder="Optional" value={proxyForm.username} onChange={pf('username')} />
               </div>
               <div>
                 <label className="text-xs font-mono text-forge-dim mb-1 block">Password</label>
-                <input className="w-full px-3 py-2 text-sm" type="password" placeholder="Optional" value={form.password || ''} onChange={f('password')} />
+                <input className="w-full px-3 py-2 text-sm" type="password" placeholder="Optional" value={proxyForm.password} onChange={pf('password')} />
               </div>
             </div>
             <div>
               <label className="text-xs font-mono text-forge-dim mb-1 block">Protocol</label>
-              <select className="w-full px-3 py-2 text-sm" value={form.protocol || 'http'} onChange={f('protocol')}>
+              <select className="w-full px-3 py-2 text-sm" value={proxyForm.protocol} onChange={pf('protocol')}>
                 <option value="http">HTTP</option>
                 <option value="socks5">SOCKS5</option>
               </select>

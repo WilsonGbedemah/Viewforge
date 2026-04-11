@@ -23,13 +23,13 @@ install-frontend:
 
 # ── Dev (single URL) ──────────────────────────────────────────────────────────
 # Builds the React app then serves everything through FastAPI.
-# Open: http://localhost:8000
+# Open: http://localhost:3000
 
 dev: build
 	@echo ""
-	@echo "  Open http://localhost:8000"
+	@echo "  Open http://localhost:3000"
 	@echo ""
-	cd backend && uv run uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+	cd backend && uv run uvicorn main:app --host 0.0.0.0 --port 3000 --reload
 
 # ── Hot-reload dev (two processes) ───────────────────────────────────────────
 # Use this during active UI development to get Vite HMR.
@@ -40,7 +40,7 @@ watch:
 	@make -j2 backend frontend
 
 backend:
-	cd backend && uv run uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+	cd backend && uv run uvicorn main:app --host 0.0.0.0 --port 3000 --reload
 
 frontend:
 	cd frontend && npm run dev
@@ -58,7 +58,7 @@ help:
 	@echo "ViewForge - YouTube Browser Automation Tool"
 	@echo ""
 	@echo "  make install           First-time setup (installs everything)"
-	@echo "  make dev               Build frontend + start backend at http://localhost:8000"
-	@echo "  make watch             Hot-reload dev mode (Vite at :5173 + backend at :8000)"
+	@echo "  make dev               Build frontend + start backend at http://localhost:3000"
+	@echo "  make watch             Hot-reload dev mode (Vite at :5173 + backend at :3000)"
 	@echo "  make build             Build frontend only"
 	@echo ""

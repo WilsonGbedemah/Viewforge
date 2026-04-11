@@ -2,11 +2,11 @@
 SMS verification provider integrations.
 
 Supported providers:
-  5sim         — https://5sim.net          (recommended, cheap US/UK numbers)
-  sms-activate — https://sms-activate.org  (large inventory, global)
+  sms-activate — https://sms-activate.org  (recommended, largest inventory, global)
+  5sim         — https://5sim.net          (alternative, cheap US/UK numbers)
 
 Configure via .env:
-  SMS_PROVIDER=5sim
+  SMS_PROVIDER=sms-activate
   SMS_API_KEY=your_key_here
   SMS_DEFAULT_COUNTRY=us
 """
