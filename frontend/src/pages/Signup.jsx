@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { Flame } from 'lucide-react'
 import { api } from '../api'
 import { useAuth } from '../context/AuthContext'
 
@@ -43,11 +42,8 @@ export default function Signup() {
       <div className="w-full max-w-sm">
 
         {/* Logo */}
-        <div className="flex items-center justify-center gap-3 mb-8">
-          <div className="w-9 h-9 bg-forge-red rounded-lg flex items-center justify-center">
-            <Flame size={18} className="text-white" />
-          </div>
-          <span className="text-forge-text font-bold text-2xl tracking-tight">ViewForge</span>
+        <div className="flex justify-center mb-8">
+          <img src="/logo.svg" alt="ViewForge" className="h-9 w-auto" />
         </div>
 
         {/* Card */}

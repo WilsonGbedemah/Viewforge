@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Users, Megaphone, ScrollText, Flame, LogOut } from 'lucide-react'
+import { LayoutDashboard, Users, Megaphone, ScrollText, LogOut } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuth } from '../context/AuthContext'
 import { api } from '../api'
@@ -25,14 +25,9 @@ export default function Sidebar() {
     <aside className="w-56 shrink-0 bg-forge-surface border-r border-forge-border flex flex-col">
 
       {/* Logo */}
-      <div className="px-5 py-6 border-b border-forge-border">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 bg-forge-red rounded flex items-center justify-center">
-            <Flame size={15} className="text-white" />
-          </div>
-          <span className="text-forge-text font-bold text-lg tracking-tight">ViewForge</span>
-        </div>
-        <p className="text-forge-dim text-xs mt-1 font-mono">v1.0.0</p>
+      <div className="px-5 py-5 border-b border-forge-border">
+        <img src="/logo.svg" alt="ViewForge" className="h-7 w-auto" />
+        <p className="text-forge-dim text-xs mt-1.5 font-mono">v1.0.0</p>
       </div>
 
       {/* Nav */}
