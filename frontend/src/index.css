@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-forge-bg text-forge-text font-sans antialiased;
+  }
+
+  input, select, textarea {
+    @apply bg-forge-muted border border-forge-border rounded text-forge-text
+           placeholder-forge-dim focus:outline-none focus:border-forge-amber
+           transition-colors duration-150;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-forge-red hover:bg-red-600 text-white font-semibold px-4 py-2
+           rounded transition-all duration-150 text-sm;
+  }
+
+  .btn-ghost {
+    @apply border border-forge-border hover:border-forge-muted text-forge-dim
+           hover:text-forge-text font-medium px-4 py-2 rounded transition-all
+           duration-150 text-sm;
+  }
+
+  .btn-amber {
+    @apply bg-forge-amber hover:bg-yellow-500 text-forge-bg font-semibold
+           px-4 py-2 rounded transition-all duration-150 text-sm;
+  }
+
+  .card {
+    @apply bg-forge-surface border border-forge-border rounded-lg p-5;
+  }
+
+  .tag {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-mono font-medium;
+  }
+}
