@@ -1,0 +1,330 @@
+ViewForge -- Client User Guide
+How to Set Up and Run Your First YouTube View Campaign
+============================================================
+
+
+WHAT IS VIEWFORGE?
+------------------
+
+ViewForge is a browser automation tool that visits YouTube and watches
+videos the same way a real human would -- but fully automatically. It:
+
+  - Creates real Google accounts on its own (no human clicks required)
+  - Opens a real Chromium browser for each session
+  - Navigates to YouTube through different paths (homepage, search, etc.)
+  - Watches the target video for a realistic duration
+  - Spaces out sessions naturally to avoid patterns
+  - Runs 24/7 until your target view count is reached
+
+The only thing you do is create a campaign (set the target video and
+settings), click Start, and the system handles everything else.
+
+
+============================================================
+SECTION 1 -- FIRST-TIME SETUP (DO THIS ONCE)
+============================================================
+
+STEP 1: Open the app
+
+  Go to the URL provided by your developer in your web browser.
+  Example: https://viewforge-production.up.railway.app
+
+  You will see a login screen.
+
+
+STEP 2: Create your admin account
+
+  Click "Sign up" and enter:
+    - A username (e.g. admin)
+    - A password of your choice
+
+  This is your private login for the ViewForge dashboard.
+  Keep this password safe.
+
+
+STEP 3: Add a Proxy (recommended for production)
+
+  A proxy is an IP address the browser uses when visiting YouTube.
+  Using proxies makes the traffic look like it comes from different
+  locations, which is important for larger campaigns.
+
+  To add a proxy:
+    1. Click "Accounts" in the left sidebar
+    2. Click "Add Proxy" (top right)
+    3. Fill in the proxy details provided by your proxy service:
+         - Label: a name you recognise (e.g. "US Proxy 1")
+         - Host: the IP address or hostname
+         - Port: the port number
+         - Username / Password: if your proxy requires authentication
+         - Protocol: HTTP or SOCKS5 (check with your proxy provider)
+    4. Click "Add Proxy"
+
+  Note: For initial testing without a proxy, you can skip this step.
+  The browser will use your server's IP address.
+
+
+============================================================
+SECTION 2 -- CREATING YOUR FIRST CAMPAIGN
+============================================================
+
+A campaign is a single job: "Watch THIS video THIS many times."
+You can run multiple campaigns at the same time for different videos.
+
+
+STEP 1: Go to Campaigns
+
+  Click "Campaigns" in the left sidebar.
+
+
+STEP 2: Click "+ Add Campaign"
+
+  A settings panel will open. Fill in the following:
+
+
+  -- BASIC SETTINGS --
+
+  Campaign Name
+    A label for your own reference.
+    Example: "Product Launch Video -- May 2026"
+
+  Target YouTube URL
+    The full URL of the video you want views on.
+    Example: https://www.youtube.com/watch?v=XXXXXXXXXXX
+
+  Total Sessions Target
+    How many total views you want this campaign to generate.
+    Example: 500
+
+  Sessions Per Account Per Day
+    How many times each Google account will watch per day.
+    Keep this at 2 or 3 to stay within safe limits.
+    Default: 2
+
+  Min Watch Time / Max Watch Time (seconds)
+    The range of how long each session will watch the video.
+    Example: Min 90, Max 300 means each view lasts 1.5 to 5 minutes.
+    Recommended: at least 30% of the video length as your minimum.
+
+
+  -- ENGAGEMENT (OPTIONAL) --
+
+  Enable Likes
+    If turned on, accounts will occasionally like the video.
+
+  Enable Comments
+    If turned on, accounts will occasionally post a comment.
+    You can add a list of comment phrases to use (one per line).
+    Example phrases:
+      Great content!
+      Really informative, thanks for sharing.
+      This helped me a lot.
+
+
+  -- ENTRY PATHS --
+
+  This controls how the browser navigates to the video.
+  Using multiple paths makes the traffic look more natural.
+  Default options: Home, Search, Suggested
+  Leave all three checked.
+
+  Search Keywords
+    If "Search" is one of your entry paths, add keywords that
+    someone might use to find your video naturally.
+    Example: "best marketing tips 2026"
+
+
+  -- AUTO-CREATE ACCOUNTS --
+
+  This is the fully automated account creation feature.
+
+  Toggle: "Auto-create accounts when needed"   --> Turn this ON
+
+  Minimum Account Pool Size
+    How many Google accounts to keep ready at all times.
+    Recommended starting value: 5
+    The system creates this many accounts before the first session runs,
+    then creates more automatically as they get used up.
+
+  Country
+    Which country the Google accounts should be created in.
+    Default: United States
+    This affects the phone number used for verification.
+
+  Proxy for New Accounts (optional)
+    If you added a proxy in Section 1, select it here.
+    New accounts will be created using that proxy.
+
+
+STEP 3: Click "Save Campaign"
+
+  The campaign appears in the list with status "stopped".
+
+
+============================================================
+SECTION 3 -- STARTING THE CAMPAIGN
+============================================================
+
+STEP 1: Click the Play button (triangle icon) on your campaign card
+
+  The status changes from "stopped" to "running".
+
+
+WHAT HAPPENS NEXT (fully automatic):
+
+  The system will immediately begin:
+
+  1. ACCOUNT CREATION
+     The engine creates the number of Google accounts you specified.
+     Each account goes through a full automated signup:
+       - Generates a random realistic name and birthday
+       - Opens a real browser window
+       - Fills out the Google signup form
+       - Verifies the phone number via your SMS provider (sms-activate)
+       - Agrees to terms and saves the account
+     This takes approximately 3 to 8 minutes per account.
+
+  2. WARM-UP
+     Before watching the target video, each session browses YouTube
+     naturally -- the homepage, trending videos, search results --
+     to build up realistic behaviour history.
+
+  3. NAVIGATION
+     The browser navigates to your target video using one of the
+     entry paths you configured (home feed, search, or suggested).
+
+  4. WATCHING
+     The video plays for a random duration within your min/max range.
+     The browser scrolls, moves the mouse, and interacts naturally.
+
+  5. COOLDOWN
+     After watching, the account rests for 15 to 45 minutes before
+     its next session. This is normal and intentional.
+
+  6. REPEAT
+     The process repeats until the Total Sessions Target is reached,
+     then the campaign status changes to "completed" automatically.
+
+
+============================================================
+SECTION 4 -- MONITORING YOUR CAMPAIGN
+============================================================
+
+DASHBOARD (click "Dashboard" in the sidebar)
+
+  Shows a live overview:
+    - Total accounts registered
+    - Active campaigns
+    - Sessions completed today
+    - Success vs failed sessions
+
+
+CAMPAIGNS PAGE
+
+  Each campaign card shows:
+    - Current status (running / completed / stopped)
+    - Progress: e.g. "47 / 500 sessions"
+    - A green chip showing "auto-create >= 5" if auto-create is on
+
+
+ACCOUNTS PAGE (click "Accounts" in the sidebar)
+
+  Shows every Google account the system has created, including:
+    - Current status (idle / running / cooldown)
+    - Sessions completed today
+    - Last active time
+    - Which proxy it is using
+
+  You can edit an account's proxy or viewing style if needed.
+
+
+LOGS PAGE (click "Logs" in the sidebar)
+
+  Shows a live real-time feed of everything happening:
+    - Account creation steps
+    - Navigation attempts
+    - Watch completions
+    - Any errors or warnings
+
+  Use this page if you want to see exactly what the system is doing
+  at any given moment.
+
+
+============================================================
+SECTION 5 -- STOPPING AND RESUMING
+============================================================
+
+TO STOP A CAMPAIGN:
+  Click the Stop button (square icon) on the campaign card.
+  The system finishes the current active session and then stops.
+  All progress is saved.
+
+TO RESUME A CAMPAIGN:
+  Click the Play button again.
+  The campaign continues from where it left off.
+
+TO RUN MULTIPLE CAMPAIGNS:
+  You can create and start as many campaigns as you like.
+  Each runs independently with its own account pool.
+
+
+============================================================
+SECTION 6 -- SCHEDULE (OPTIONAL)
+============================================================
+
+If you want the campaign to only run during certain hours or
+between specific dates, you can set a schedule when creating
+or editing the campaign:
+
+  Schedule Start: the date/time to begin automatically
+  Schedule End:   the date/time to stop automatically
+
+The system also applies natural human activity patterns on its
+own regardless of schedule:
+  - More sessions in evening hours (6pm to 11pm)
+  - Fewer sessions during the day
+  - Near-zero activity between midnight and 5am
+
+
+============================================================
+SECTION 7 -- WHAT TO EXPECT DURING TESTING
+============================================================
+
+When testing for the first time without an SMS API key:
+
+  The system will still attempt to create accounts. When it reaches
+  the phone verification step, it will pause and ask you to manually
+  enter a real phone number and the SMS code that arrives on it.
+  This lets you verify the full flow works before connecting a
+  paid SMS provider.
+
+When you are ready to go fully automatic:
+
+  1. Create an account at https://sms-activate.org
+  2. Add a small balance ($5 to $10 is enough to start)
+  3. Copy your API key from your sms-activate profile page
+  4. Provide it to your developer to add to the app configuration
+  5. Restart the app -- from that point everything runs with zero
+     human input required
+
+
+============================================================
+SECTION 8 -- QUICK REFERENCE
+============================================================
+
+  Login URL          Provided by your developer
+  Dashboard          Overview of all activity
+  Accounts tab       View and manage Google accounts
+  Campaigns tab      Create, start, stop campaigns
+  Logs tab           Live feed of all automation activity
+
+  SMS provider       https://sms-activate.org
+  Hosting platform   https://railway.app
+
+  Support / changes  Contact your developer
+
+
+============================================================
+
+ViewForge -- Automated YouTube View Engine
+Document prepared April 2026
+============================================================

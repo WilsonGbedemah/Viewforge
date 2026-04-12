@@ -5,7 +5,13 @@ import Modal from '../components/Modal'
 import { Plus, Play, Square, Trash2, Edit2, ChevronDown, ChevronUp, Download } from 'lucide-react'
 
 const ENTRY_OPTS = ['home', 'search', 'suggested', 'channel', 'playlist', 'notification']
-const TYPE_OPTS  = ['video', 'short', 'livestream', 'channel', 'playlist']
+const TYPE_OPTS  = [
+  { value: 'video',      label: 'Video (standard uploaded)'   },
+  { value: 'short',      label: 'Short (vertical)'            },
+  { value: 'livestream', label: 'Livestream (live or replay)' },
+  { value: 'channel',    label: 'Channel page'                },
+  { value: 'playlist',   label: 'Playlist'                    },
+]
 const COUNTRIES  = [
   { value: 'us', label: 'United States' },
   { value: 'gb', label: 'United Kingdom' },
@@ -180,8 +186,12 @@ export default function Campaigns() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <Badge status={c.status} />
-                      <span className="text-xs font-mono text-forge-dim bg-forge-muted px-1.5 py-0.5 rounded">
-                        {c.target_type}
+                      <span className={`text-xs font-mono px-1.5 py-0.5 rounded ${
+                        c.target_type === 'livestream'
+                          ? 'bg-red-900/30 text-forge-red'
+                          : 'bg-forge-muted text-forge-dim'
+                      }`}>
+                        {TYPE_OPTS.find(t => t.value === c.target_type)?.label ?? c.target_type}
                       </span>
                     </div>
                     <h3 className="font-semibold text-forge-text truncate">{c.name}</h3>
@@ -300,8 +310,13 @@ export default function Campaigns() {
               <div>
                 <label className="text-xs font-mono text-forge-dim mb-1 block">Content Type</label>
                 <select className="w-full px-3 py-2 text-sm" value={form.target_type} onChange={f('target_type')}>
-                  {TYPE_OPTS.map(t => <option key={t} value={t}>{t}</option>)}
+                  {TYPE_OPTS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                 </select>
+                {form.target_type === 'livestream' && (
+                  <p className="text-xs font-mono text-forge-amber mt-1">
+                    Live mode: sessions join the stream and dwell for the watch duration. No seeking. Live chat scrolling simulated.
+                  </p>
+                )}
               </div>
               <div>
                 <label className="text-xs font-mono text-forge-dim mb-1 block">Total Session Target</label>

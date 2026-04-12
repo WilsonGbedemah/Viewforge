@@ -1,0 +1,151 @@
+ViewForge -- Infrastructure & Running Costs
+Prepared for client review
+============================================================
+
+
+OVERVIEW
+--------
+
+ViewForge requires two external services to operate fully:
+
+  1. An SMS verification provider -- needed to create Google accounts automatically
+  2. A cloud hosting provider -- needed to run the application on a live server
+
+Both are pay-as-you-go with no long-term contracts. This document explains
+what each service does, what it costs, and what the client needs to do.
+
+
+============================================================
+1. SMS VERIFICATION -- sms-activate.org
+============================================================
+
+WHAT IT IS AND WHY IT IS NEEDED
+
+When ViewForge creates a new Google account automatically, Google requires a
+real phone number to send a one-time verification code. The SMS provider
+supplies virtual phone numbers for this purpose. The system rents a number,
+Google sends the code to it, the system reads the code and completes the
+account creation -- all without any human involvement.
+
+Without this service, Google accounts cannot be created automatically. The
+software will still run and manage existing accounts, but it cannot create
+new ones on its own.
+
+Provider: sms-activate.org
+Website:  https://sms-activate.org
+
+  - Industry standard -- the largest virtual number provider globally
+  - Supports 180+ countries
+  - Used by most large-scale automation projects worldwide
+
+
+HOW THE CHARGES WORK
+
+There is NO monthly subscription fee. You buy credits (a balance top-up)
+and the system draws from that balance each time it rents a number.
+
+  Google verification -- United States     $0.10 to $0.20 per number
+  Google verification -- United Kingdom    $0.15 to $0.25 per number
+  Google verification -- Other countries   $0.05 to $0.30 per number
+  Minimum balance top-up                   $1.00 (card, crypto, PayPal)
+
+Example: If the campaign needs 500 Google accounts created and each number
+costs $0.15, the total SMS cost is approximately $75.
+
+Numbers that fail (Google rejects them) are NOT charged -- only successful
+verifications are billed.
+
+
+HOW TO SET IT UP
+
+  Step 1. Go to https://sms-activate.org and create an account
+  Step 2. Add a balance (minimum $1 to start testing)
+  Step 3. Go to your profile page and copy your API key
+  Step 4. Provide the API key to your developer so it can be added to
+          the application configuration
+  Step 5. Restart ViewForge -- from that point account creation is
+          fully automatic with no human involvement
+
+Note: ViewForge includes a manual testing mode that works without an API
+key. In this mode the system can verify the entire account creation flow
+works correctly before any money is spent.
+
+
+============================================================
+2. CLOUD HOSTING -- Railway
+============================================================
+
+WHAT IT IS AND WHY IT IS NEEDED
+
+ViewForge runs a real browser (Chromium) on the server to simulate human
+viewing behaviour. This means it cannot be hosted on standard platforms
+like Vercel or Netlify, which do not support long-running processes or
+browser software. Railway is a container-based platform that supports
+exactly this use case.
+
+Website: https://railway.app
+Sign up with GitHub -- no credit card required for the free trial.
+
+
+PRICING TIERS
+
+  Trial    Free              $5 of credit, no card required.
+                             Enough for 3 to 7 days of testing.
+
+  Hobby    $5/month base     Includes $5 usage credit.
+                             Light use costs approximately $5 to $10/month.
+
+  Pro      $20/month base    For team access and higher resource limits.
+                             Recommended for production.
+
+
+ESTIMATED RUNNING COST FOR PRODUCTION
+
+The main cost driver is how many browser sessions run at the same time.
+Each active browser session uses approximately 300 to 500 MB of RAM.
+
+  Demo / testing (1-2 simultaneous sessions)      $5 to $10/month
+  Small production (3-5 simultaneous sessions)    $15 to $30/month
+  Medium production (10+ simultaneous sessions)   $50 to $100/month
+  Large production                                See note below
+
+Note on large scale: For campaigns running 20+ simultaneous sessions
+continuously, a dedicated VPS on DigitalOcean or Hetzner becomes more
+cost-effective than Railway. A Hetzner server with 8 GB RAM costs
+approximately $8 to $12/month and handles 15 to 20 parallel sessions.
+This is the recommended path once the client scales beyond the initial
+deployment.
+
+
+============================================================
+SUMMARY OF COSTS
+============================================================
+
+  sms-activate top-up (testing)             ~$5 one-time
+  sms-activate (500 accounts/month)         ~$75/month
+  Railway hosting (demo/testing)            $0 (trial credit)
+  Railway hosting (small production)        $10 to $30/month
+  Railway hosting (large production)        $50 to $100/month
+
+
+============================================================
+WHAT THE CLIENT NEEDS TO ACTION
+============================================================
+
+  [ ] Create an account on sms-activate.org (https://sms-activate.org)
+      and provide the API key to the developer
+
+  [ ] Create an account on Railway (https://railway.app) using GitHub
+      login -- free, no credit card needed for the trial
+
+  [ ] Decide on a starting budget for SMS credits
+      (recommended: $10 to $20 to start)
+
+  [ ] Confirm the total number of accounts to be created so the exact
+      SMS cost can be estimated
+
+
+============================================================
+
+This document reflects pricing as of April 2026.
+All prices are approximate and subject to change by the respective providers.

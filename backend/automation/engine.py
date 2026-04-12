@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session as DBSession
 
 from database import SessionLocal
 import models
-from automation.browser import get_page
+from automation.browser import get_page, harvest_cookies, close_context
 from automation.warmup import warmup_session
 from automation.watcher import pick_watch_duration, navigate_to_video, watch_video
 from automation.relogin import ensure_logged_in
@@ -332,10 +332,18 @@ async def _run_session(db: DBSession, account: models.Account, campaign: models.
         session.status = "completed"
         session.completed_at = datetime.now(timezone.utc)
 
+        # Harvest fresh cookies back to DB so account stays signed in next session
+        fresh_cookies = await harvest_cookies(account.id)
+        if fresh_cookies:
+            account.cookie_data = fresh_cookies
+
         account.daily_session_count += 1
         account.last_active = datetime.now(timezone.utc)
         account.status = "cooldown"
         db.commit()
+
+        # Close browser context immediately to free RAM
+        await close_context(account.id)
 
         # Account-level cooldown: 15–45 min
         cooldown = random.uniform(15 * 60, 45 * 60)
@@ -353,11 +361,7 @@ async def _run_session(db: DBSession, account: models.Account, campaign: models.
         session.completed_at = datetime.now(timezone.utc)
         account.status = "idle"
         db.commit()
-        if page:
-            try:
-                await page.close()
-            except Exception:
-                pass
+        await close_context(account.id)
         raise
 
     except Exception as e:
@@ -367,11 +371,7 @@ async def _run_session(db: DBSession, account: models.Account, campaign: models.
         account.status = "idle"
         db.commit()
         log(f"Session failed: {e}", "error")
-        if page:
-            try:
-                await page.close()
-            except Exception:
-                pass
+        await close_context(account.id)
         return False
 
 
@@ -383,7 +383,6 @@ async def _run_browse_only_session(db: DBSession, account: models.Account, campa
     def log(msg, level="info"):
         _db_log(db, msg, level, account_id=account.id, campaign_id=campaign.id)
 
-    page = None
     try:
         account.status = "running"
         db.commit()
@@ -398,11 +397,7 @@ async def _run_browse_only_session(db: DBSession, account: models.Account, campa
     finally:
         account.status = "idle"
         db.commit()
-        if page:
-            try:
-                await page.close()
-            except Exception:
-                pass
+        await close_context(account.id)
 
 
 def _pick_account(db: DBSession, account_ids: list, campaign: models.Campaign):
