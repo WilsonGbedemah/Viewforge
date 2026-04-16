@@ -115,7 +115,12 @@ class FiveSimProvider(SMSProvider):
 # ── sms-activate ──────────────────────────────────────────────────────────────
 
 class SmsActivateProvider(SMSProvider):
-    BASE = "https://api.sms-activate.org/stubs/handler_api.php"
+    # Configurable via SMS_BASE_URL env var — defaults to the canonical endpoint.
+    # smsactive.org is a website mirror only; the API lives at api.sms-activate.org.
+    BASE = os.getenv(
+        "SMS_BASE_URL",
+        "https://api.sms-activate.org/stubs/handler_api.php",
+    )
 
     # Country IDs for Google (service code "go") — most common ones
     COUNTRY_IDS = {
