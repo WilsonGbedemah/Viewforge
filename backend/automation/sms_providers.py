@@ -64,6 +64,29 @@ class FiveSimProvider(SMSProvider):
             "Accept": "application/json",
         }
 
+    def _parse_json(self, r) -> dict:
+        """Parse JSON response, raising a clear error if the body is empty or not JSON."""
+        body = r.text.strip()
+        if not body:
+            raise RuntimeError(
+                f"5sim returned an empty response (HTTP {r.status_code}). "
+                "Check that SMS_API_KEY is set correctly in Railway Variables "
+                "and that your 5sim balance is above $0 at https://5sim.net"
+            )
+        try:
+            return r.json()
+        except Exception:
+            raise RuntimeError(
+                f"5sim returned non-JSON (HTTP {r.status_code}): {body[:300]}"
+            )
+
+    async def check_balance(self) -> float:
+        """Return current account balance. Raises if unreachable or unauthorised."""
+        async with httpx.AsyncClient(timeout=15) as client:
+            r = await client.get(f"{self.BASE}/user/profile", headers=self.headers)
+            data = self._parse_json(r)
+            return float(data.get("balance", 0))
+
     async def get_number(self, country: str) -> Tuple[str, str]:
         async with httpx.AsyncClient(timeout=30) as client:
             r = await client.get(
@@ -71,7 +94,7 @@ class FiveSimProvider(SMSProvider):
                 headers=self.headers,
             )
             r.raise_for_status()
-            data = r.json()
+            data = self._parse_json(r)
             activation_id = str(data["id"])
             phone = data["phone"]
             if not phone.startswith("+"):
@@ -85,7 +108,7 @@ class FiveSimProvider(SMSProvider):
                 headers=self.headers,
             )
             r.raise_for_status()
-            data = r.json()
+            data = self._parse_json(r)
             sms_list = data.get("sms") or []
             if sms_list:
                 return sms_list[-1].get("code")

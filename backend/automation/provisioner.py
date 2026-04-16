@@ -204,6 +204,26 @@ async def ensure_pool(
     profiles_dir = os.getenv("PROFILES_DIR", "./profiles")
     country      = campaign.auto_create_country or "us"
 
+    # ── Pre-flight: verify SMS provider is reachable and has balance ─────────
+    if hasattr(provider, "check_balance"):
+        try:
+            balance = await provider.check_balance()
+            log_cb(f"5sim balance: ${balance:.2f}", "info")
+            if balance < 0.50:
+                log_cb(
+                    f"5sim balance is too low (${balance:.2f}). "
+                    "Top up your 5sim account at https://5sim.net before creating accounts.",
+                    "warning",
+                )
+                return []
+        except Exception as e:
+            log_cb(
+                f"Cannot reach SMS provider: {e}. "
+                "Verify SMS_API_KEY is set correctly in Railway Variables.",
+                "error",
+            )
+            return []
+
     log_cb(
         f"Pool has {current_count} account(s), minimum is {campaign.min_accounts}. "
         f"Auto-creating {needed} account(s) "
