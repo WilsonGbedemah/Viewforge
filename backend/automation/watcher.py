@@ -22,15 +22,17 @@ def pick_watch_duration(min_sec: int, max_sec: int, style: str = "random") -> fl
     """
     Pick a watch duration using weighted tiers.
     style: 'short', 'medium', 'long', or 'random' (weighted).
-    Some sessions skip or exit very early regardless of style.
+    Skip/peek behaviours only apply for casual short sessions (min < 5 min).
+    When min_sec >= 300 the full minimum is always respected.
     """
-    # 8% chance of skipping entirely
-    if random.random() < 0.08:
-        return 0
-
-    # 10% chance of a very brief peek (2–8s)
-    if random.random() < 0.10:
-        return random.uniform(2, 8)
+    # Skip and peek only make sense for short casual sessions
+    if min_sec < 300:
+        # 8% chance of skipping entirely
+        if random.random() < 0.08:
+            return 0
+        # 10% chance of a very brief peek (2–8s)
+        if random.random() < 0.10:
+            return random.uniform(2, 8)
 
     if style == "short":
         tier = "short"

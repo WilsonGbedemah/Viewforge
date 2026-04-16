@@ -62,8 +62,8 @@ class Campaign(Base):
     target_url = Column(String, nullable=False)           # YouTube URL (video, channel, playlist)
     target_type = Column(String, default="video")         # video, short, livestream, channel, playlist
     status = Column(String, default="paused")             # paused, running, completed, stopped
-    min_watch_seconds = Column(Integer, default=30)
-    max_watch_seconds = Column(Integer, default=180)
+    min_watch_seconds = Column(Integer, default=3600)
+    max_watch_seconds = Column(Integer, default=5400)
     sessions_per_account_day = Column(Integer, default=2)
     total_sessions_target = Column(Integer, default=100)
     completed_sessions = Column(Integer, default=0)

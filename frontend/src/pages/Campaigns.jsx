@@ -23,17 +23,23 @@ const COUNTRIES  = [
 
 const EMPTY = {
   name: '', target_url: '', target_type: 'video',
-  min_watch_seconds: 30, max_watch_seconds: 180,
+  min_watch_seconds: 3600, max_watch_seconds: 5400,
   sessions_per_account_day: 2, total_sessions_target: 100,
   enable_likes: false, enable_comments: false,
   comment_phrases: '', entry_paths: ['home', 'search', 'suggested'],
   search_keywords: '',
   schedule_start: '', schedule_end: '',
   account_ids: [],
-  auto_create_accounts: false,
-  min_accounts: 3,
+  auto_create_accounts: true,
+  min_accounts: 5,
   auto_create_country: 'us',
   auto_create_proxy_id: '',
+}
+
+function fmtWatch(seconds) {
+  if (seconds >= 3600) return `${Math.round(seconds / 60)}m`
+  if (seconds >= 60)   return `${Math.round(seconds / 60)}m`
+  return `${seconds}s`
 }
 
 export default function Campaigns() {
@@ -240,7 +246,7 @@ export default function Campaigns() {
 
                 {/* Config chips */}
                 <div className="flex flex-wrap gap-1.5 mt-3">
-                  <span className="tag bg-forge-muted text-forge-dim">{c.min_watch_seconds}–{c.max_watch_seconds}s watch</span>
+                  <span className="tag bg-forge-muted text-forge-dim">{fmtWatch(c.min_watch_seconds)}–{fmtWatch(c.max_watch_seconds)} watch</span>
                   <span className="tag bg-forge-muted text-forge-dim">{c.sessions_per_account_day}/day per account</span>
                   {c.enable_likes && <span className="tag bg-blue-900/30 text-forge-blue">likes on</span>}
                   {c.enable_comments && <span className="tag bg-yellow-900/30 text-forge-amber">comments on</span>}
@@ -326,19 +332,19 @@ export default function Campaigns() {
 
             {/* Watch time */}
             <div>
-              <p className="text-xs font-mono text-forge-dim uppercase tracking-wider mb-2">Watch Time Range</p>
+              <p className="text-xs font-mono text-forge-dim uppercase tracking-wider mb-2">Watch Time Per Session</p>
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="text-xs font-mono text-forge-dim mb-1 block">Min (seconds)</label>
-                  <input className="w-full px-3 py-2 text-sm" type="number" min="5" value={form.min_watch_seconds} onChange={f('min_watch_seconds')} />
+                  <label className="text-xs font-mono text-forge-dim mb-1 block">Min (seconds) <span className="text-forge-dim/60">3600 = 60 min</span></label>
+                  <input className="w-full px-3 py-2 text-sm" type="number" min="60" value={form.min_watch_seconds} onChange={f('min_watch_seconds')} />
                 </div>
                 <div>
-                  <label className="text-xs font-mono text-forge-dim mb-1 block">Max (seconds)</label>
-                  <input className="w-full px-3 py-2 text-sm" type="number" min="10" value={form.max_watch_seconds} onChange={f('max_watch_seconds')} />
+                  <label className="text-xs font-mono text-forge-dim mb-1 block">Max (seconds) <span className="text-forge-dim/60">5400 = 90 min</span></label>
+                  <input className="w-full px-3 py-2 text-sm" type="number" min="120" value={form.max_watch_seconds} onChange={f('max_watch_seconds')} />
                 </div>
                 <div>
-                  <label className="text-xs font-mono text-forge-dim mb-1 block">Sessions/Account/Day <span className="text-forge-dim/60">(max 3)</span></label>
-                  <input className="w-full px-3 py-2 text-sm" type="number" min="1" max="3" value={form.sessions_per_account_day} onChange={f('sessions_per_account_day')} />
+                  <label className="text-xs font-mono text-forge-dim mb-1 block">Sessions/Account/Day</label>
+                  <input className="w-full px-3 py-2 text-sm" type="number" min="1" value={form.sessions_per_account_day} onChange={f('sessions_per_account_day')} />
                 </div>
               </div>
             </div>
@@ -415,52 +421,52 @@ export default function Campaigns() {
               )}
             </div>
 
-            {/* Auto-create accounts */}
-            <div className={`space-y-3 rounded p-3 border transition-colors ${form.auto_create_accounts ? 'border-forge-green/30 bg-forge-green/5' : 'border-forge-border'}`}>
-              <label className="flex items-center gap-2.5 cursor-pointer">
+            {/* Account pool */}
+            <div className="space-y-3 rounded p-3 border border-forge-green/30 bg-forge-green/5">
+              <div>
+                <span className="text-sm font-medium text-forge-text">Account Pool for this Campaign</span>
+                <p className="text-xs text-forge-dim font-mono mt-0.5">
+                  Existing accounts are always reused first. New accounts are created automatically only when the pool falls below the target number.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="text-xs font-mono text-forge-dim mb-1 block">Number of accounts needed</label>
+                  <input className="w-full px-3 py-2 text-sm" type="number" min="1"
+                    value={form.min_accounts} onChange={f('min_accounts')} />
+                </div>
+                <div>
+                  <label className="text-xs font-mono text-forge-dim mb-1 block">Phone number country</label>
+                  <select className="w-full px-3 py-2 text-sm" value={form.auto_create_country} onChange={f('auto_create_country')}>
+                    {COUNTRIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-mono text-forge-dim mb-1 block">Proxy for new accounts</label>
+                  <select className="w-full px-3 py-2 text-sm" value={form.auto_create_proxy_id} onChange={f('auto_create_proxy_id')}>
+                    <option value="">— None —</option>
+                    {proxies.map(p => <option key={p.id} value={p.id}>{p.label} ({p.host}:{p.port})</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <label className="flex items-center gap-2.5 cursor-pointer pt-1">
                 <input type="checkbox" checked={form.auto_create_accounts}
                   onChange={fb('auto_create_accounts')} className="accent-forge-green" />
-                <div>
-                  <span className="text-sm font-medium text-forge-text">Auto-create accounts when needed</span>
-                  <p className="text-xs text-forge-dim font-mono mt-0.5">
-                    Engine automatically creates new Google accounts when the pool is empty or below the minimum.
-                  </p>
-                </div>
+                <span className="text-xs text-forge-dim font-mono">
+                  Auto-create missing accounts when campaign starts or pool runs low
+                </span>
               </label>
-
-              {form.auto_create_accounts && (
-                <div className="grid grid-cols-3 gap-3 pt-1">
-                  <div>
-                    <label className="text-xs font-mono text-forge-dim mb-1 block">Min accounts in pool</label>
-                    <input className="w-full px-3 py-2 text-sm" type="number" min="1" max="20"
-                      value={form.min_accounts} onChange={f('min_accounts')} />
-                  </div>
-                  <div>
-                    <label className="text-xs font-mono text-forge-dim mb-1 block">Phone number country</label>
-                    <select className="w-full px-3 py-2 text-sm" value={form.auto_create_country} onChange={f('auto_create_country')}>
-                      {COUNTRIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs font-mono text-forge-dim mb-1 block">Proxy for new accounts</label>
-                    <select className="w-full px-3 py-2 text-sm" value={form.auto_create_proxy_id} onChange={f('auto_create_proxy_id')}>
-                      <option value="">— None —</option>
-                      {proxies.map(p => <option key={p.id} value={p.id}>{p.label} ({p.host}:{p.port})</option>)}
-                    </select>
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Account assignment */}
             <div>
               <p className="text-xs font-mono text-forge-dim uppercase tracking-wider mb-2">
-                Assigned Accounts ({form.account_ids.length} selected)
-                {form.auto_create_accounts && (
-                  <span className="ml-2 text-forge-green normal-case font-normal">
-                    — leave empty to let the engine create them automatically
-                  </span>
-                )}
+                Pre-assign Existing Accounts ({form.account_ids.length} selected)
+                <span className="ml-2 text-forge-green normal-case font-normal">
+                  — optional, leave empty to let the engine fill the pool automatically
+                </span>
               </p>
               <div className="grid grid-cols-2 gap-1.5 max-h-32 overflow-y-auto">
                 {accounts.map(a => (
