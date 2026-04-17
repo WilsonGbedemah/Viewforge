@@ -437,7 +437,7 @@ export default function Campaigns() {
                     value={form.min_accounts} onChange={f('min_accounts')} />
                 </div>
                 <div>
-                  <label className="text-xs font-mono text-forge-dim mb-1 block">Phone number country</label>
+                  <label className="text-xs font-mono text-forge-dim mb-1 block">Phone number country <span className="text-forge-amber">(use US — most stock)</span></label>
                   <select className="w-full px-3 py-2 text-sm" value={form.auto_create_country} onChange={f('auto_create_country')}>
                     {COUNTRIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                   </select>

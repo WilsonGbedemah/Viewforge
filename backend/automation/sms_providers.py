@@ -64,6 +64,15 @@ class FiveSimProvider(SMSProvider):
             "Accept": "application/json",
         }
 
+    # Known plain-text error strings returned by 5sim (not JSON)
+    _PLAIN_ERRORS = {
+        "no free phones":       "No phone numbers available for this country. Switch to 'us' in campaign settings.",
+        "not enough product":   "No numbers in stock for this country/service. Switch to 'us' in campaign settings.",
+        "not enough rating":    "Your 5sim account rating is too low to buy numbers. Complete more purchases to raise it.",
+        "bad request":          "5sim rejected the request. Check the country code in campaign settings.",
+        "no connection":        "5sim cannot connect to the carrier. Try again or switch country.",
+    }
+
     def _parse_json(self, r) -> dict:
         """Parse JSON response, raising a clear error if the body is empty or not JSON."""
         body = r.text.strip()
@@ -73,6 +82,11 @@ class FiveSimProvider(SMSProvider):
                 "Check that SMS_API_KEY is set correctly in Railway Variables "
                 "and that your 5sim balance is above $0 at https://5sim.net"
             )
+        # 5sim returns plain-text strings for known error conditions
+        body_lower = body.lower()
+        for key, friendly in self._PLAIN_ERRORS.items():
+            if key in body_lower:
+                raise RuntimeError(f"5sim error — {friendly}")
         try:
             return r.json()
         except Exception:
