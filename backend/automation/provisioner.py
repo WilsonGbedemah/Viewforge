@@ -27,7 +27,7 @@ from sqlalchemy.orm import Session as DBSession
 import models
 from database import SessionLocal
 from automation.account_creator import AccountCreator, AccountCreationError
-from automation.sms_providers import get_sms_provider, FiveSimProvider
+from automation.sms_providers import get_sms_provider, NO_FREE_PHONES, FallbackSMSProvider
 
 logger = logging.getLogger("viewforge.provisioner")
 
@@ -168,12 +168,13 @@ async def _create_one_account(
                 raise
             except Exception as e:
                 err_str = str(e)
-                # 5sim occasionally has no numbers in stock — inventory recovers
-                # within minutes so we retry rather than give up immediately.
-                if FiveSimProvider.NO_FREE_PHONES in err_str:
+                # No numbers in stock — inventory recovers within minutes so we
+                # retry rather than give up immediately.  The FallbackSMSProvider
+                # already tried all configured providers before raising this.
+                if NO_FREE_PHONES in err_str:
                     if attempt <= _NO_STOCK_RETRIES:
                         log_cb(
-                            f"5sim has no US numbers right now (attempt {attempt}/{_NO_STOCK_RETRIES + 1}). "
+                            f"No phone numbers available right now (attempt {attempt}/{_NO_STOCK_RETRIES + 1}). "
                             f"Waiting {_NO_STOCK_RETRY_DELAY}s for inventory to refresh…",
                             "warning",
                         )
@@ -181,9 +182,8 @@ async def _create_one_account(
                         continue
                     else:
                         log_cb(
-                            "5sim still has no US numbers after all retries. "
-                            "Check https://5sim.net — US stock may be exhausted. "
-                            "Try again in 10–15 minutes.",
+                            "All SMS providers have no numbers after all retries. "
+                            "Check your provider balances and try again in 10–15 minutes.",
                             "error",
                         )
                         return None
@@ -234,22 +234,40 @@ async def ensure_pool(
     profiles_dir = os.getenv("PROFILES_DIR", "./profiles")
     country      = campaign.auto_create_country or "us"
 
-    # ── Pre-flight: verify SMS provider is reachable and has balance ─────────
+    # ── Pre-flight: verify SMS provider(s) are reachable and have balance ──────
     if hasattr(provider, "check_balance"):
         try:
             balance = await provider.check_balance()
-            log_cb(f"5sim balance: ${balance:.2f}", "info")
-            if balance < 0.50:
-                log_cb(
-                    f"5sim balance is too low (${balance:.2f}). "
-                    "Top up your 5sim account at https://5sim.net before creating accounts.",
-                    "warning",
-                )
-                return []
+            if isinstance(balance, dict):
+                # FallbackSMSProvider returns {name: float}
+                all_low = True
+                for name, bal in balance.items():
+                    if isinstance(bal, float):
+                        log_cb(f"{name} balance: ${bal:.2f}", "info")
+                        if bal >= 0.50:
+                            all_low = False
+                    else:
+                        log_cb(f"{name} balance check failed: {bal}", "warning")
+                if all_low:
+                    log_cb(
+                        "All SMS provider balances are too low (< $0.50). "
+                        "Top up at least one provider before creating accounts.",
+                        "warning",
+                    )
+                    return []
+            else:
+                log_cb(f"SMS provider balance: ${balance:.2f}", "info")
+                if balance < 0.50:
+                    log_cb(
+                        f"SMS provider balance is too low (${balance:.2f}). "
+                        "Top up your account before creating accounts.",
+                        "warning",
+                    )
+                    return []
         except Exception as e:
             log_cb(
                 f"Cannot reach SMS provider: {e}. "
-                "Verify SMS_API_KEY is set correctly in Railway Variables.",
+                "Verify your API key(s) are set correctly in Railway Variables.",
                 "error",
             )
             return []
