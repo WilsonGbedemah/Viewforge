@@ -121,13 +121,6 @@ def health():
     return {"status": "ok", "version": "1.0.0"}
 
 
-# ── Serve built React frontend ────────────────────────────────────────────────
-# Must be registered LAST so API routes take priority.
-_DIST = pathlib.Path(__file__).parent.parent / "frontend" / "dist"
-if _DIST.exists():
-    app.mount("/", StaticFiles(directory=str(_DIST), html=True), name="frontend")
-
-
 @app.websocket("/ws/logs")
 async def websocket_logs(ws: WebSocket):
     """Live log stream. Frontend connects here to receive real-time updates."""
@@ -140,3 +133,12 @@ async def websocket_logs(ws: WebSocket):
         ws_manager.disconnect(ws)
     except Exception:
         ws_manager.disconnect(ws)
+
+
+# ── Serve built React frontend ────────────────────────────────────────────────
+# Must be registered LAST so API routes and WebSocket routes take priority.
+# app.mount("/") intercepts ALL requests (including WebSocket upgrades) so
+# any route that must be reachable must be defined BEFORE this mount.
+_DIST = pathlib.Path(__file__).parent.parent / "frontend" / "dist"
+if _DIST.exists():
+    app.mount("/", StaticFiles(directory=str(_DIST), html=True), name="frontend")
