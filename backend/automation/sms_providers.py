@@ -66,12 +66,15 @@ class FiveSimProvider(SMSProvider):
 
     # Known plain-text error strings returned by 5sim (not JSON)
     _PLAIN_ERRORS = {
-        "no free phones":       "No phone numbers available for this country. Switch to 'us' in campaign settings.",
-        "not enough product":   "No numbers in stock for this country/service. Switch to 'us' in campaign settings.",
+        "no free phones":       "NO_FREE_PHONES",
+        "not enough product":   "NO_FREE_PHONES",
         "not enough rating":    "Your 5sim account rating is too low to buy numbers. Complete more purchases to raise it.",
         "bad request":          "5sim rejected the request. Check the country code in campaign settings.",
-        "no connection":        "5sim cannot connect to the carrier. Try again or switch country.",
+        "no connection":        "5sim cannot connect to the carrier. Try again in a minute.",
     }
+
+    # Sentinel raised when inventory is temporarily exhausted — provisioner retries on this
+    NO_FREE_PHONES = "NO_FREE_PHONES"
 
     def _parse_json(self, r) -> dict:
         """Parse JSON response, raising a clear error if the body is empty or not JSON."""
@@ -86,7 +89,7 @@ class FiveSimProvider(SMSProvider):
         body_lower = body.lower()
         for key, friendly in self._PLAIN_ERRORS.items():
             if key in body_lower:
-                raise RuntimeError(f"5sim error — {friendly}")
+                raise RuntimeError(friendly if friendly != self.NO_FREE_PHONES else self.NO_FREE_PHONES)
         try:
             return r.json()
         except Exception:

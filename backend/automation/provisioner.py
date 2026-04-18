@@ -27,7 +27,7 @@ from sqlalchemy.orm import Session as DBSession
 import models
 from database import SessionLocal
 from automation.account_creator import AccountCreator, AccountCreationError
-from automation.sms_providers import get_sms_provider
+from automation.sms_providers import get_sms_provider, FiveSimProvider
 
 logger = logging.getLogger("viewforge.provisioner")
 
@@ -75,6 +75,12 @@ def _make_sticky_proxy(db: DBSession, label: str) -> Optional[models.Proxy]:
     return proxy
 
 
+# How many times to retry when 5sim has no numbers in stock before giving up.
+# Each retry waits _NO_STOCK_RETRY_DELAY seconds. Total max wait ≈ 5 min.
+_NO_STOCK_RETRIES    = 5
+_NO_STOCK_RETRY_DELAY = 60   # seconds between retries
+
+
 async def _create_one_account(
     index: int,
     campaign: models.Campaign,
@@ -89,78 +95,102 @@ async def _create_one_account(
     """
     Create a single account, respecting the concurrency semaphore.
     Returns the new account's DB id, or None on failure.
+
+    Retries automatically when 5sim reports no numbers in stock —
+    inventory fluctuates minute-to-minute so a brief wait usually resolves it.
     """
     async with semaphore:
-        log_cb(f"Creating account {index + 1}…", "info")
-        try:
-            # Each account gets its own DB session to avoid cross-thread conflicts
-            acc_db = SessionLocal()
+        for attempt in range(1, _NO_STOCK_RETRIES + 2):  # +2 so first attempt is #1
+            log_cb(f"Creating account {index + 1}…", "info")
             try:
-                if rotating_proxy_enabled:
-                    acc_proxy = _make_sticky_proxy(
-                        acc_db,
-                        label=f"{campaign.name} — proxy {int(time.time())}-{index}",
+                acc_db = SessionLocal()
+                try:
+                    if rotating_proxy_enabled:
+                        acc_proxy = _make_sticky_proxy(
+                            acc_db,
+                            label=f"{campaign.name} — proxy {int(time.time())}-{index}",
+                        )
+                        proxy_id = acc_proxy.id if acc_proxy else None
+                    else:
+                        acc_proxy = shared_proxy
+                        proxy_id = campaign.auto_create_proxy_id if shared_proxy else None
+
+                    creator = AccountCreator(
+                        proxy            = acc_proxy,
+                        profile_base_dir = profiles_dir,
+                        log_cb           = log_cb,
+                        sms_provider     = provider,
                     )
-                    proxy_id = acc_proxy.id if acc_proxy else None
-                else:
-                    acc_proxy = shared_proxy
-                    proxy_id = campaign.auto_create_proxy_id if shared_proxy else None
+                    result = await creator.create(country=country)
 
-                creator = AccountCreator(
-                    proxy            = acc_proxy,
-                    profile_base_dir = profiles_dir,
-                    log_cb           = log_cb,
-                    sms_provider     = provider,
-                )
-                result = await creator.create(country=country)
+                    existing = acc_db.query(models.Account).filter(
+                        models.Account.email == result.email
+                    ).first()
 
-                existing = acc_db.query(models.Account).filter(
-                    models.Account.email == result.email
-                ).first()
+                    if existing:
+                        existing.cookie_data     = result.cookie_data
+                        existing.profile_dir     = result.profile_dir
+                        existing.google_password = result.password
+                        if proxy_id:
+                            existing.proxy_id = proxy_id
+                        acc_db.commit()
+                        account_id = existing.id
+                    else:
+                        account = models.Account(
+                            label           = f"{campaign.name} — auto {int(time.time())}",
+                            email           = result.email,
+                            google_password = result.password,
+                            profile_dir     = result.profile_dir,
+                            cookie_data     = result.cookie_data,
+                            proxy_id        = proxy_id,
+                            watch_style     = "random",
+                            status          = "idle",
+                        )
+                        acc_db.add(account)
+                        acc_db.commit()
+                        acc_db.refresh(account)
+                        account_id = account.id
 
-                if existing:
-                    existing.cookie_data     = result.cookie_data
-                    existing.profile_dir     = result.profile_dir
-                    existing.google_password = result.password
-                    if proxy_id:
-                        existing.proxy_id = proxy_id
-                    acc_db.commit()
-                    account_id = existing.id
-                else:
-                    account = models.Account(
-                        label           = f"{campaign.name} — auto {int(time.time())}",
-                        email           = result.email,
-                        google_password = result.password,
-                        profile_dir     = result.profile_dir,
-                        cookie_data     = result.cookie_data,
-                        proxy_id        = proxy_id,
-                        watch_style     = "random",
-                        status          = "idle",
+                    ip_note = (
+                        f" (unique IP: {acc_proxy.username})"
+                        if rotating_proxy_enabled and acc_proxy else ""
                     )
-                    acc_db.add(account)
-                    acc_db.commit()
-                    acc_db.refresh(account)
-                    account_id = account.id
+                    log_cb(f"Created: {result.email} (id={account_id}){ip_note}", "info")
+                    return account_id
 
-                ip_note = (
-                    f" (unique IP: {acc_proxy.username})"
-                    if rotating_proxy_enabled and acc_proxy else ""
-                )
-                log_cb(f"Created: {result.email} (id={account_id}){ip_note}", "info")
-                return account_id
+                finally:
+                    acc_db.close()
 
-            finally:
-                acc_db.close()
-
-        except AccountCreationError as e:
-            log_cb(f"Account creation blocked: {e}", "warning")
-            return None
-        except asyncio.CancelledError:
-            raise
-        except Exception as e:
-            log_cb(f"Account creation failed (slot {index + 1}): {e}", "error")
-            await asyncio.sleep(10)
-            return None
+            except AccountCreationError as e:
+                log_cb(f"Account creation blocked: {e}", "warning")
+                return None
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                err_str = str(e)
+                # 5sim occasionally has no numbers in stock — inventory recovers
+                # within minutes so we retry rather than give up immediately.
+                if FiveSimProvider.NO_FREE_PHONES in err_str:
+                    if attempt <= _NO_STOCK_RETRIES:
+                        log_cb(
+                            f"5sim has no US numbers right now (attempt {attempt}/{_NO_STOCK_RETRIES + 1}). "
+                            f"Waiting {_NO_STOCK_RETRY_DELAY}s for inventory to refresh…",
+                            "warning",
+                        )
+                        await asyncio.sleep(_NO_STOCK_RETRY_DELAY)
+                        continue
+                    else:
+                        log_cb(
+                            "5sim still has no US numbers after all retries. "
+                            "Check https://5sim.net — US stock may be exhausted. "
+                            "Try again in 10–15 minutes.",
+                            "error",
+                        )
+                        return None
+                log_cb(f"Account creation failed (slot {index + 1}): {e}", "error")
+                await asyncio.sleep(10)
+                return None
+        return None  # unreachable but satisfies type checker
 
 
 async def ensure_pool(
