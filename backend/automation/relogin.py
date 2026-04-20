@@ -109,7 +109,21 @@ async def relogin(
         await _click_next(page)
         await asyncio.sleep(random.uniform(2.5, 4.0))
 
-        # Navigate to YouTube to confirm
+        # Check if Google is asking for a 2FA / verification challenge
+        if await _is_2fa_challenge(page):
+            _log(log_cb,
+                 f"2-Step Verification is enabled on {account.email} — the engine cannot log in automatically. "
+                 "Fix this with ONE of the following options:\n"
+                 "  OPTION 1 (easiest): Disable 2-Step Verification — "
+                 "sign into that Google account in a browser, go to "
+                 "myaccount.google.com/security, click '2-Step Verification', and turn it OFF.\n"
+                 "  OPTION 2 (keep 2FA on): Create a Google App Password — "
+                 "go to myaccount.google.com/apppasswords, generate a 16-character app password, "
+                 "then edit this account in ViewForge and paste that app password into the Password field instead.",
+                 "error")
+            return False
+
+        # Navigate to YouTube to confirm sign-in
         await page.goto(YOUTUBE_URL, wait_until="domcontentloaded", timeout=20000)
         await asyncio.sleep(random.uniform(1.5, 2.5))
 
@@ -117,7 +131,8 @@ async def relogin(
         if ok:
             _log(log_cb, "Re-login successful")
         else:
-            _log(log_cb, "Re-login may have failed — signed-in state unclear", "warning")
+            _log(log_cb, "Re-login failed — Google may have blocked the sign-in attempt. "
+                         "Check the account at myaccount.google.com for any security alerts.", "warning")
         return ok
 
     except Exception as exc:
@@ -151,6 +166,45 @@ async def _type_field(page: Page, selector: str, text: str):
             await page.keyboard.type(char, delay=random.uniform(60, 160))
     except Exception:
         pass
+
+
+async def _is_2fa_challenge(page: Page) -> bool:
+    """
+    Return True if the current page is a Google 2-Step Verification / challenge screen.
+    Covers: authenticator TOTP, SMS pin, phone prompt, and the generic 'Verify it's you' page.
+    """
+    try:
+        # URL-based check — Google challenge pages always contain these path segments
+        if any(seg in page.url for seg in ("/challenge/", "/2sv/", "signin/v2/challenge")):
+            return True
+
+        # Input fields only present on 2FA screens
+        totp = await page.query_selector('input[name="totpPin"], input[name="idvPin"]')
+        if totp:
+            return True
+
+        # Generic challenge container Google uses for all 2FA types
+        challenge_div = await page.query_selector('div[data-challengetype], div[data-challengeid]')
+        if challenge_div:
+            return True
+
+        # Text that appears on the "Verify it's you" and phone-prompt screens
+        body = await page.inner_text("body")
+        body_lower = body.lower()
+        if any(phrase in body_lower for phrase in (
+            "2-step verification",
+            "verify it's you",
+            "verify its you",
+            "check your phone",
+            "get a verification code",
+            "enter the code",
+            "authenticator app",
+        )):
+            return True
+
+        return False
+    except Exception:
+        return False
 
 
 async def _click_next(page: Page):
