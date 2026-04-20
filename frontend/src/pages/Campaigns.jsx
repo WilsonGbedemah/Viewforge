@@ -30,8 +30,8 @@ const EMPTY = {
   search_keywords: '',
   schedule_start: '', schedule_end: '',
   account_ids: [],
-  auto_create_accounts: true,
-  min_accounts: 5,
+  auto_create_accounts: false,
+  min_accounts: 1,
   auto_create_country: 'us',
   auto_create_proxy_id: '',
 }
@@ -250,14 +250,9 @@ export default function Campaigns() {
                   <span className="tag bg-forge-muted text-forge-dim">{c.sessions_per_account_day}/day per account</span>
                   {c.enable_likes && <span className="tag bg-blue-900/30 text-forge-blue">likes on</span>}
                   {c.enable_comments && <span className="tag bg-yellow-900/30 text-forge-amber">comments on</span>}
-                  {(c.account_ids || []).length > 0 && (
-                    <span className="tag bg-forge-muted text-forge-dim">{c.account_ids.length} accounts</span>
-                  )}
-                  {c.auto_create_accounts && (
-                    <span className="tag bg-forge-green/10 text-forge-green border border-forge-green/30">
-                      auto-create ≥{c.min_accounts}
-                    </span>
-                  )}
+                  <span className="tag bg-forge-muted text-forge-dim">
+                    {(c.account_ids || []).length} account{(c.account_ids || []).length !== 1 ? 's' : ''} assigned
+                  </span>
                   {c.schedule_start && (
                     <span className="tag bg-forge-muted text-forge-dim">
                       starts {new Date(c.schedule_start).toLocaleDateString()}
@@ -421,70 +416,33 @@ export default function Campaigns() {
               )}
             </div>
 
-            {/* Account pool */}
-            <div className="space-y-3 rounded p-3 border border-forge-green/30 bg-forge-green/5">
-              <div>
-                <span className="text-sm font-medium text-forge-text">Account Pool for this Campaign</span>
-                <p className="text-xs text-forge-dim font-mono mt-0.5">
-                  Existing accounts are always reused first. New accounts are created automatically only when the pool falls below the target number.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="text-xs font-mono text-forge-dim mb-1 block">Number of accounts needed</label>
-                  <input className="w-full px-3 py-2 text-sm" type="number" min="1"
-                    value={form.min_accounts} onChange={f('min_accounts')} />
-                </div>
-                <div>
-                  <label className="text-xs font-mono text-forge-dim mb-1 block">Phone number country <span className="text-forge-amber">(use US — most stock)</span></label>
-                  <select className="w-full px-3 py-2 text-sm" value={form.auto_create_country} onChange={f('auto_create_country')}>
-                    {COUNTRIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs font-mono text-forge-dim mb-1 block">Proxy for new accounts</label>
-                  <select className="w-full px-3 py-2 text-sm" value={form.auto_create_proxy_id} onChange={f('auto_create_proxy_id')}>
-                    <option value="">— None —</option>
-                    {proxies.map(p => <option key={p.id} value={p.id}>{p.label} ({p.host}:{p.port})</option>)}
-                  </select>
-                </div>
-              </div>
-
-              <label className="flex items-center gap-2.5 cursor-pointer pt-1">
-                <input type="checkbox" checked={form.auto_create_accounts}
-                  onChange={fb('auto_create_accounts')} className="accent-forge-green" />
-                <span className="text-xs text-forge-dim font-mono">
-                  Auto-create missing accounts when campaign starts or pool runs low
-                </span>
-              </label>
-            </div>
-
             {/* Account assignment */}
-            <div>
-              <p className="text-xs font-mono text-forge-dim uppercase tracking-wider mb-2">
-                Pre-assign Existing Accounts ({form.account_ids.length} selected)
-                <span className="ml-2 text-forge-green normal-case font-normal">
-                  — optional, leave empty to let the engine fill the pool automatically
-                </span>
+            <div className="space-y-2 rounded p-3 border border-forge-amber/30 bg-forge-amber/5">
+              <p className="text-sm font-medium text-forge-text">
+                Assign Accounts <span className="text-forge-red text-xs font-mono ml-1">required</span>
               </p>
-              <div className="grid grid-cols-2 gap-1.5 max-h-32 overflow-y-auto">
+              <p className="text-xs text-forge-dim font-mono">
+                Select the Google accounts that will watch this campaign's video.
+                Add accounts first in the <strong className="text-forge-text">Accounts</strong> tab if the list is empty.
+              </p>
+              <div className="grid grid-cols-2 gap-1.5 max-h-40 overflow-y-auto mt-1">
                 {accounts.map(a => (
                   <label key={a.id} className="flex items-center gap-2 text-sm cursor-pointer px-2 py-1 rounded hover:bg-forge-muted">
                     <input type="checkbox" checked={form.account_ids.includes(a.id)}
                       onChange={() => toggleAccount(a.id)} className="accent-forge-amber" />
-                    <span className="text-forge-dim truncate">{a.label}</span>
+                    <span className="text-forge-dim truncate">{a.label || a.email}</span>
                     <Badge status={a.status} />
                   </label>
                 ))}
                 {accounts.length === 0 && (
-                  <p className="text-forge-dim text-xs font-mono col-span-2">
-                    {form.auto_create_accounts
-                      ? 'No accounts yet — the engine will create them when the campaign starts.'
-                      : 'No accounts registered'}
+                  <p className="text-forge-dim text-xs font-mono col-span-2 py-2">
+                    No accounts registered — go to the Accounts tab and click + Add Account first.
                   </p>
                 )}
               </div>
+              {form.account_ids.length > 0 && (
+                <p className="text-xs font-mono text-forge-green">{form.account_ids.length} account{form.account_ids.length !== 1 ? 's' : ''} selected</p>
+              )}
             </div>
 
             {error && <p className="text-forge-red text-xs font-mono">{error}</p>}

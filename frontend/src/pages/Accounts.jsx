@@ -4,7 +4,7 @@ import Badge from '../components/Badge'
 import Modal from '../components/Modal'
 import { Plus, Trash2, RefreshCw, Edit2 } from 'lucide-react'
 
-const ACCOUNT_EMPTY = { label: '', email: '', proxy_id: '', watch_style: 'random', notes: '' }
+const ACCOUNT_EMPTY = { label: '', email: '', google_password: '', proxy_id: '', watch_style: 'random', notes: '' }
 const PROXY_EMPTY   = { label: '', host: '', port: '', username: '', password: '', protocol: 'http' }
 
 const WATCH_STYLES = [
@@ -15,14 +15,14 @@ const WATCH_STYLES = [
 ]
 
 export default function Accounts() {
-  const [accounts, setAccounts] = useState([])
-  const [proxies,  setProxies]  = useState([])
-  const [modal,    setModal]    = useState(null)   // null | 'edit' | 'proxy'
-  const [accForm,  setAccForm]  = useState(ACCOUNT_EMPTY)
-  const [proxyForm, setProxyForm] = useState(PROXY_EMPTY)
-  const [selected, setSelected] = useState(null)
-  const [error,    setError]    = useState('')
-  const [loading,  setLoading]  = useState(false)
+  const [accounts,   setAccounts]  = useState([])
+  const [proxies,    setProxies]   = useState([])
+  const [modal,      setModal]     = useState(null)   // null | 'add' | 'edit' | 'proxy'
+  const [accForm,    setAccForm]   = useState(ACCOUNT_EMPTY)
+  const [proxyForm,  setProxyForm] = useState(PROXY_EMPTY)
+  const [selected,   setSelected]  = useState(null)
+  const [error,      setError]     = useState('')
+  const [loading,    setLoading]   = useState(false)
 
   const load = async () => {
     const [a, p] = await Promise.all([api.listAccounts(), api.listProxies()])
@@ -32,15 +32,23 @@ export default function Accounts() {
 
   useEffect(() => { load() }, [])
 
-  // ── Handlers ──
+  // ── Handlers ──────────────────────────────────────────────────────────────
+
+  const openAdd = () => {
+    setAccForm(ACCOUNT_EMPTY)
+    setError('')
+    setModal('add')
+  }
+
   const openEdit = (acc) => {
     setSelected(acc)
     setAccForm({
-      label:       acc.label,
-      email:       acc.email,
-      proxy_id:    acc.proxy_id || '',
-      watch_style: acc.watch_style || 'random',
-      notes:       acc.notes || '',
+      label:          acc.label,
+      email:          acc.email,
+      google_password:'',
+      proxy_id:       acc.proxy_id || '',
+      watch_style:    acc.watch_style || 'random',
+      notes:          acc.notes || '',
     })
     setError('')
     setModal('edit')
@@ -48,13 +56,36 @@ export default function Accounts() {
 
   const openProxy = () => { setProxyForm(PROXY_EMPTY); setError(''); setModal('proxy') }
 
+  const handleAddSave = async () => {
+    if (!accForm.label.trim()) { setError('Label is required'); return }
+    if (!accForm.email.trim()) { setError('Email is required'); return }
+    setLoading(true); setError('')
+    try {
+      await api.createAccount({
+        label:          accForm.label.trim(),
+        email:          accForm.email.trim(),
+        google_password:accForm.google_password.trim() || null,
+        proxy_id:       accForm.proxy_id ? Number(accForm.proxy_id) : null,
+        watch_style:    accForm.watch_style,
+        notes:          accForm.notes.trim() || null,
+      })
+      setModal(null)
+      await load()
+    } catch (e) { setError(e.message) }
+    setLoading(false)
+  }
+
   const handleEditSave = async () => {
     setLoading(true); setError('')
     try {
-      await api.updateAccount(selected.id, {
-        ...accForm,
-        proxy_id: accForm.proxy_id ? Number(accForm.proxy_id) : null,
-      })
+      const patch = {
+        label:       accForm.label,
+        proxy_id:    accForm.proxy_id ? Number(accForm.proxy_id) : null,
+        watch_style: accForm.watch_style,
+        notes:       accForm.notes || null,
+      }
+      if (accForm.google_password.trim()) patch.google_password = accForm.google_password.trim()
+      await api.updateAccount(selected.id, patch)
       setModal(null)
       await load()
     } catch (e) { setError(e.message) }
@@ -101,9 +132,14 @@ export default function Accounts() {
           <h1 className="text-2xl font-bold text-forge-text">Accounts</h1>
           <p className="text-forge-dim text-sm font-mono mt-0.5">{accounts.length} registered</p>
         </div>
-        <button className="btn-ghost" onClick={openProxy}>
-          <span className="flex items-center gap-1.5"><Plus size={14} />Add Proxy</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button className="btn-ghost" onClick={openProxy}>
+            <span className="flex items-center gap-1.5"><Plus size={14} />Add Proxy</span>
+          </button>
+          <button className="btn-primary" onClick={openAdd}>
+            <span className="flex items-center gap-1.5"><Plus size={14} />Add Account</span>
+          </button>
+        </div>
       </div>
 
       {/* Proxy strip */}
@@ -144,7 +180,7 @@ export default function Accounts() {
             {accounts.length === 0 && (
               <tr>
                 <td colSpan={8} className="text-center text-forge-dim py-10 font-mono text-sm">
-                  No accounts yet — accounts are created automatically when a campaign runs
+                  No accounts yet — click <span className="text-forge-text">+ Add Account</span> to register a Google account
                 </td>
               </tr>
             )}
@@ -183,6 +219,57 @@ export default function Accounts() {
         </table>
       </div>
 
+      {/* ── Add Account Modal ── */}
+      {modal === 'add' && (
+        <Modal title="Add Google Account" onClose={() => setModal(null)}>
+          <div className="space-y-3">
+            <p className="text-xs text-forge-dim font-mono">
+              Register a Google account you have already created. The engine will use it to watch videos.
+            </p>
+            <div>
+              <label className="text-xs font-mono text-forge-dim mb-1 block">Label <span className="text-forge-red">*</span></label>
+              <input className="w-full px-3 py-2 text-sm" placeholder="e.g. Test Account 1"
+                value={accForm.label} onChange={af('label')} autoFocus />
+            </div>
+            <div>
+              <label className="text-xs font-mono text-forge-dim mb-1 block">Gmail Address <span className="text-forge-red">*</span></label>
+              <input className="w-full px-3 py-2 text-sm font-mono" placeholder="example@gmail.com"
+                type="email" value={accForm.email} onChange={af('email')} />
+            </div>
+            <div>
+              <label className="text-xs font-mono text-forge-dim mb-1 block">Google Password</label>
+              <input className="w-full px-3 py-2 text-sm" placeholder="Stored securely for auto re-login"
+                type="password" value={accForm.google_password} onChange={af('google_password')} />
+            </div>
+            <div>
+              <label className="text-xs font-mono text-forge-dim mb-1 block">Proxy</label>
+              <select className="w-full px-3 py-2 text-sm" value={accForm.proxy_id} onChange={af('proxy_id')}>
+                <option value="">— None —</option>
+                {proxies.map(p => <option key={p.id} value={p.id}>{p.label} ({p.host}:{p.port})</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-mono text-forge-dim mb-1 block">Viewing Style</label>
+              <select className="w-full px-3 py-2 text-sm" value={accForm.watch_style} onChange={af('watch_style')}>
+                {WATCH_STYLES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-mono text-forge-dim mb-1 block">Notes</label>
+              <input className="w-full px-3 py-2 text-sm" placeholder="Optional notes"
+                value={accForm.notes} onChange={af('notes')} />
+            </div>
+            {error && <p className="text-forge-red text-xs font-mono">{error}</p>}
+            <div className="flex gap-2 pt-1">
+              <button className="btn-primary flex-1" onClick={handleAddSave} disabled={loading}>
+                {loading ? 'Saving…' : 'Add Account'}
+              </button>
+              <button className="btn-ghost" onClick={() => setModal(null)}>Cancel</button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
       {/* ── Edit Account Modal ── */}
       {modal === 'edit' && (
         <Modal title="Edit Account" onClose={() => setModal(null)}>
@@ -190,6 +277,16 @@ export default function Accounts() {
             <div>
               <label className="text-xs font-mono text-forge-dim mb-1 block">Label</label>
               <input className="w-full px-3 py-2 text-sm" value={accForm.label} onChange={af('label')} />
+            </div>
+            <div>
+              <label className="text-xs font-mono text-forge-dim mb-1 block">Gmail Address</label>
+              <input className="w-full px-3 py-2 text-sm font-mono" value={accForm.email}
+                readOnly disabled className="w-full px-3 py-2 text-sm font-mono opacity-50 cursor-not-allowed" />
+            </div>
+            <div>
+              <label className="text-xs font-mono text-forge-dim mb-1 block">New Password <span className="text-forge-dim/60">(leave blank to keep current)</span></label>
+              <input className="w-full px-3 py-2 text-sm" type="password" placeholder="Leave blank to keep unchanged"
+                value={accForm.google_password} onChange={af('google_password')} />
             </div>
             <div>
               <label className="text-xs font-mono text-forge-dim mb-1 block">Proxy</label>
