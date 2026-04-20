@@ -1,6 +1,6 @@
 # ── ViewForge — Production Dockerfile ────────────────────────────────────────
 # Single image: builds React frontend, installs Python deps + Playwright,
-# then serves everything through FastAPI on $PORT (default 3000).
+# then serves everything through FastAPI on $PORT (default 8000).
 
 FROM python:3.11-slim
 
@@ -34,13 +34,13 @@ RUN cd frontend && npm run build
 COPY backend/ backend/
 
 # ── Runtime environment ───────────────────────────────────────────────────────
-ENV PORT=3000
+ENV PORT=8000
 ENV HOST=0.0.0.0
 ENV HEADLESS=true
 ENV PROFILES_DIR=/app/profiles
 
 RUN mkdir -p /app/profiles
 
-EXPOSE 3000
+EXPOSE 8000
 
-CMD ["sh", "-c", "cd backend && python -m uvicorn main:app --host 0.0.0.0 --port ${PORT:-3000}"]
+CMD ["sh", "-c", "cd backend && python -m uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]

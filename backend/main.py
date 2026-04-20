@@ -2,7 +2,7 @@
 ViewForge — YouTube Browser Automation Tool
 FastAPI backend with WebSocket live log streaming.
 Serves the built React frontend as static files so the whole app
-runs on a single URL (http://localhost:3000).
+runs on a single URL (http://localhost:8000).
 """
 import asyncio
 import json
