@@ -1,0 +1,374 @@
+================================================================================
+  VIEWFORGE — COMPLETE CAMPAIGN SETUP GUIDE (MANUAL ACCOUNT MODE)
+================================================================================
+
+This guide walks you through every step required to create a Google account,
+set up a campaign, and start watching a YouTube video — from scratch.
+
+Read every step carefully before clicking anything.
+
+================================================================================
+  PART 1 — CREATE A GOOGLE ACCOUNT (do this BEFORE creating a campaign)
+================================================================================
+
+Before you can run a campaign, you need at least one Google (Gmail) account
+registered in the system. ViewForge uses this account to watch the video.
+
+You must create the Google account yourself first, then register it here.
+
+--------------------------------------------------------------------------------
+STEP 1 — CREATE A GOOGLE ACCOUNT OUTSIDE OF VIEWFORGE
+--------------------------------------------------------------------------------
+
+1. Open a web browser (Chrome, Firefox, etc.)
+2. Go to:  https://accounts.google.com/signup
+3. Fill in the signup form:
+     - First name / Last name  (use any name)
+     - Username                (this becomes the Gmail address)
+     - Password                (save this — you will need it in Step 2)
+4. Complete the verification steps Google asks for.
+5. Once the account is created, note down:
+     - The full Gmail address  (e.g. john.doe.test2024@gmail.com)
+     - The password you set
+
+   >>> You now have a Gmail address and password. Keep them handy.
+
+
+--------------------------------------------------------------------------------
+STEP 2 — REGISTER THE ACCOUNT IN VIEWFORGE
+--------------------------------------------------------------------------------
+
+1. Open your ViewForge app (your Railway URL).
+2. Click "Accounts" in the left sidebar.
+3. Click the red "+ Add Account" button in the top-right corner.
+   A form will slide open.
+
+Fill in the form:
+
+  +-------------------------------------------------------------------------+
+  |  Label                                                                  |
+  |  A short name to identify this account inside ViewForge.               |
+  |  Example:  Test Account 1                                               |
+  |                                                                         |
+  |  >>> Type any label. Do not leave it blank.                            |
+  +-------------------------------------------------------------------------+
+  |  Gmail Address                                                          |
+  |  The full Gmail address you just created.                               |
+  |  Example:  john.doe.test2024@gmail.com                                  |
+  |                                                                         |
+  |  >>> Paste the Gmail address exactly as it appears.                    |
+  +-------------------------------------------------------------------------+
+  |  Google Password                                                        |
+  |  The password for this Gmail account.                                   |
+  |  This is stored securely and used by the engine to log back in         |
+  |  automatically if the session expires.                                  |
+  |                                                                         |
+  |  >>> Type the password for this account.                               |
+  +-------------------------------------------------------------------------+
+  |  Proxy                                                                  |
+  |  Leave this as "-- None --" unless you have a proxy configured.        |
+  |  For testing, None is fine.                                             |
+  |                                                                         |
+  |  >>> Leave as: -- None --                                              |
+  +-------------------------------------------------------------------------+
+  |  Viewing Style                                                          |
+  |  Controls how the account watches videos.                               |
+  |                                                                         |
+  |  Random (weighted mix)     -- recommended for most campaigns           |
+  |  Short viewer              -- watches mostly brief clips               |
+  |  Medium viewer             -- watches a moderate portion               |
+  |  Long viewer               -- watches mostly full videos               |
+  |                                                                         |
+  |  >>> Select: Random (weighted mix)                                     |
+  +-------------------------------------------------------------------------+
+  |  Notes                                                                  |
+  |  Optional. Leave blank.                                                 |
+  +-------------------------------------------------------------------------+
+
+4. Click the red "Add Account" button.
+
+The form closes and your account now appears in the Accounts table with a
+status of "idle". It is ready to be used in a campaign.
+
+   >>> Confirm you can see the account listed before moving to Part 2.
+
+
+================================================================================
+  PART 2 — CREATE A CAMPAIGN
+================================================================================
+
+--------------------------------------------------------------------------------
+STEP 3 — OPEN THE CAMPAIGN FORM
+--------------------------------------------------------------------------------
+
+1. Click "Campaigns" in the left sidebar.
+2. Click the red "+ New Campaign" button in the top-right corner.
+   A form will slide open. Work through it top to bottom.
+
+
+--------------------------------------------------------------------------------
+STEP 4 — CAMPAIGN NAME
+--------------------------------------------------------------------------------
+
+Field:  "Campaign Name"
+
+Type any name that helps you identify this campaign later.
+Example:  Prayer Views Test 1
+
+   >>> Type your campaign name. Do not leave it blank.
+
+
+--------------------------------------------------------------------------------
+STEP 5 — TARGET YOUTUBE URL
+--------------------------------------------------------------------------------
+
+Field:  "Target YouTube URL"
+
+Paste the full link to the YouTube video you want views on.
+
+   CORRECT format:   https://www.youtube.com/watch?v=XXXXXXXXXXX
+   WRONG format:     https://youtu.be/XXXXXXXXXXX  (short links can fail)
+
+Go to the YouTube video, copy the link from the browser address bar,
+and paste it directly into this field.
+
+   >>> Paste the full youtube.com/watch?v= link. Do not use shortened links.
+
+
+--------------------------------------------------------------------------------
+STEP 6 — CONTENT TYPE
+--------------------------------------------------------------------------------
+
+Field:  "Content Type"  (dropdown)
+
+   Video (standard uploaded)   -- use for a normal uploaded YouTube video
+   Short (vertical)            -- use if the link is a YouTube Short
+   Livestream (live or replay) -- use if the link is a live stream
+   Channel page                -- use if the link is a channel, not a video
+   Playlist                    -- use if the link is a playlist
+
+   >>> For a regular video, leave it as "Video (standard uploaded)".
+
+
+--------------------------------------------------------------------------------
+STEP 7 — TOTAL SESSION TARGET
+--------------------------------------------------------------------------------
+
+Field:  "Total Session Target"
+
+The total number of watch sessions the campaign completes before stopping.
+One session = one account watching the video once.
+
+   For your FIRST TEST:  set this to 2
+   For a real run:       set this to however many views you need
+
+   >>> For testing, type: 2
+
+
+--------------------------------------------------------------------------------
+STEP 8 — WATCH TIME PER SESSION
+--------------------------------------------------------------------------------
+
+Three fields:
+
+  [ Min (seconds) ]   [ Max (seconds) ]   [ Sessions/Account/Day ]
+
+  Min (seconds)
+  Default is 3600 (= 60 minutes). Do NOT lower this below 3600.
+
+  Max (seconds)
+  Default is 5400 (= 90 minutes). Do NOT raise this above 5400.
+
+  Sessions/Account/Day
+  Default is 2. Leave it at 2.
+  Each account will watch the video a maximum of 2 times per day.
+
+   >>> Leave all three fields at their default values:
+       Min = 3600,  Max = 5400,  Sessions/Account/Day = 2
+
+
+--------------------------------------------------------------------------------
+STEP 9 — ENTRY PATHS
+--------------------------------------------------------------------------------
+
+Pill-shaped buttons: home, search, suggested, channel, playlist, notification.
+These control HOW the bot arrives at the video.
+Click a pill to turn it ON (amber/orange). Click again to turn OFF.
+
+   RECOMMENDED for a normal video:
+   [ON]  home        -- bot browses the YouTube home feed first
+   [ON]  search      -- bot searches for the video by keyword
+   [ON]  suggested   -- bot opens a random video, then navigates to yours
+   [OFF] channel     -- leave off unless your link is a channel page
+   [OFF] playlist    -- leave off unless your link is a playlist
+   [OFF] notification -- optional
+
+   >>> Make sure "home", "search", and "suggested" are ON (amber colour).
+
+
+--------------------------------------------------------------------------------
+STEP 10 — SEARCH KEYWORDS  (only visible when "search" is ON)
+--------------------------------------------------------------------------------
+
+Field:  "Search Keywords"
+
+Type the title or topic of the video exactly as someone would search for it.
+Example:  Get Wisdom For 2026 Message by Prophet Dr Emmanuel Badu Kobi
+
+   >>> Type the video title or relevant search phrase.
+       Do NOT leave it blank if "search" is turned on -- it will cause errors.
+
+
+--------------------------------------------------------------------------------
+STEP 11 — SCHEDULE WINDOW  (skip for testing)
+--------------------------------------------------------------------------------
+
+Fields:  "Start"  and  "End"  (date/time pickers)
+
+Leave BOTH fields completely empty to start immediately and run until
+the session target is reached.
+
+   >>> Leave both fields empty.
+
+
+--------------------------------------------------------------------------------
+STEP 12 — ENGAGEMENT  (skip for testing)
+--------------------------------------------------------------------------------
+
+Two checkboxes:
+   [ ] Enable rare likes (~8% chance)
+   [ ] Enable rare comments (~3% chance)
+
+   >>> For a first test, leave BOTH checkboxes unticked (OFF).
+
+
+--------------------------------------------------------------------------------
+STEP 13 — ASSIGN ACCOUNTS  *** MOST IMPORTANT STEP ***
+--------------------------------------------------------------------------------
+
+This amber-bordered box is where you connect the account you created in
+Part 1 to this campaign. The campaign cannot run without at least one
+account ticked here.
+
+You will see a list of all registered accounts with a checkbox beside each.
+
+   1. Find the account you added in Part 1 (e.g. "Test Account 1").
+   2. Tick the checkbox next to it.
+   3. You will see "1 account selected" appear below the list.
+
+   IMPORTANT: If the list shows "No accounts registered" it means you
+   skipped Part 1. Close this form, go to Accounts -> + Add Account,
+   add your Google account, then come back and create the campaign.
+
+   >>> Tick the checkbox next to your account before continuing.
+       The campaign WILL NOT start without at least one account assigned.
+
+
+--------------------------------------------------------------------------------
+STEP 14 — CREATE THE CAMPAIGN
+--------------------------------------------------------------------------------
+
+Once all fields above are filled in correctly, scroll to the bottom of the
+form and click the red "Create Campaign" button.
+
+The form closes. Your campaign appears on the Campaigns page with a
+status badge showing "paused".
+
+
+================================================================================
+  PART 3 — START THE CAMPAIGN AND WATCH THE LOGS
+================================================================================
+
+--------------------------------------------------------------------------------
+STEP 15 — START THE CAMPAIGN
+--------------------------------------------------------------------------------
+
+On the campaign card, click the green "Play  Start" button on the right side.
+
+The status badge changes to "running" (shown in green).
+
+
+--------------------------------------------------------------------------------
+STEP 16 — WATCH THE LOGS
+--------------------------------------------------------------------------------
+
+Click "Logs" in the left sidebar.
+
+Messages will begin appearing within 30 seconds.
+A healthy start looks like this:
+
+   INFO   Campaign 'Your Campaign Name' started
+   INFO   Starting session for account: Test Account 1
+   INFO   Navigating via: home
+   INFO   Watching for 3600s
+   INFO   Session 1/2 completed
+
+The campaign runs until it reaches the Total Session Target you set.
+Stop it at any time by clicking the red "Stop" button on the campaign card.
+
+
+================================================================================
+  QUICK REFERENCE — CORRECT SETTINGS FOR A TEST RUN
+================================================================================
+
+   PART 1 — ACCOUNT SETUP
+   ------------------------------------------------
+   Label                   : Test Account 1  (or any name)
+   Gmail Address           : your real Gmail address
+   Google Password         : your Gmail password
+   Proxy                   : -- None --
+   Viewing Style           : Random (weighted mix)
+
+   PART 2 — CAMPAIGN SETUP
+   ------------------------------------------------
+   Campaign Name           : Test Run 1  (or any name)
+   Target YouTube URL      : https://www.youtube.com/watch?v=YOUR_VIDEO_ID
+   Content Type            : Video (standard uploaded)
+   Total Session Target    : 2
+   Min (seconds)           : 3600
+   Max (seconds)           : 5400
+   Sessions/Account/Day    : 2
+   Entry Paths             : home ON, search ON, suggested ON (amber)
+   Search Keywords         : your video title or topic
+   Schedule Window         : leave empty
+   Enable likes            : OFF (unticked)
+   Enable comments         : OFF (unticked)
+   Assigned Accounts       : tick your account -- must show "1 account selected"
+
+
+================================================================================
+  COMMON ERRORS AND WHAT TO DO
+================================================================================
+
+ERROR: "No accounts assigned to this campaign"
+FIX:   You did not tick any account in Step 13.
+       Edit the campaign, tick your account in the Assign Accounts box,
+       save, then start again.
+       If the list was empty, go to Accounts -> + Add Account first.
+
+ERROR: Campaign starts but stops immediately with no log activity
+FIX:   The account session may have expired or the password was wrong.
+       Go to Accounts, click the Edit (pencil) icon on the account,
+       re-enter the correct password and save. Then start the campaign again.
+
+ERROR: "All accounts at daily limit or busy -- waiting 30 min"
+FIX:   This is normal. Each account can only watch 2 sessions per day
+       (Sessions/Account/Day = 2). The engine will automatically retry
+       after 30 minutes. To continue sooner:
+         Option A: Go to Accounts -> click the refresh icon on the account
+                   to reset its daily count, then start the campaign again.
+         Option B: Add more accounts (repeat Part 1) and assign them to
+                   the campaign by editing it and ticking the new accounts.
+
+ERROR: Session count goes up but views are not showing on YouTube
+FIX:   YouTube can take 24-48 hours to reflect view counts. This is
+       completely normal. Check the Logs tab to confirm sessions are
+       completing with "Session X/Y completed" before assuming a problem.
+
+ERROR: Campaign stays on "paused" and does not change to "running"
+FIX:   Try refreshing the page. If it still shows paused, check the Logs
+       tab for any error messages that explain what stopped it.
+
+================================================================================
+  END OF GUIDE
+================================================================================
