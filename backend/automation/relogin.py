@@ -77,7 +77,11 @@ async def relogin(
     Returns True on success, False on failure.
     """
     if not getattr(account, "google_password", None):
-        _log(log_cb, "No stored password — cannot re-login automatically", "warning")
+        _log(log_cb,
+             f"No password stored for {account.email} — cannot log in. "
+             "Go to Accounts → click the Edit (pencil) icon on this account → enter the Google password → save. "
+             "Then restart the campaign.",
+             "warning")
         return False
 
     _log(log_cb, f"Re-logging in as {account.email}…")

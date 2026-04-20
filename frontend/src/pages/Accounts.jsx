@@ -57,14 +57,15 @@ export default function Accounts() {
   const openProxy = () => { setProxyForm(PROXY_EMPTY); setError(''); setModal('proxy') }
 
   const handleAddSave = async () => {
-    if (!accForm.label.trim()) { setError('Label is required'); return }
-    if (!accForm.email.trim()) { setError('Email is required'); return }
+    if (!accForm.label.trim())           { setError('Label is required'); return }
+    if (!accForm.email.trim())           { setError('Gmail address is required'); return }
+    if (!accForm.google_password.trim()) { setError('Password is required — the engine needs it to log into YouTube on every session'); return }
     setLoading(true); setError('')
     try {
       await api.createAccount({
         label:          accForm.label.trim(),
         email:          accForm.email.trim(),
-        google_password:accForm.google_password.trim() || null,
+        google_password:accForm.google_password.trim(),
         proxy_id:       accForm.proxy_id ? Number(accForm.proxy_id) : null,
         watch_style:    accForm.watch_style,
         notes:          accForm.notes.trim() || null,
@@ -237,8 +238,11 @@ export default function Accounts() {
                 type="email" value={accForm.email} onChange={af('email')} />
             </div>
             <div>
-              <label className="text-xs font-mono text-forge-dim mb-1 block">Google Password</label>
-              <input className="w-full px-3 py-2 text-sm" placeholder="Stored securely for auto re-login"
+              <label className="text-xs font-mono text-forge-dim mb-1 block">
+                Google Password <span className="text-forge-red">*</span>
+                <span className="ml-1 text-forge-dim/60 normal-case font-normal">— required so the engine can log in</span>
+              </label>
+              <input className="w-full px-3 py-2 text-sm" placeholder="Enter the Gmail account password"
                 type="password" value={accForm.google_password} onChange={af('google_password')} />
             </div>
             <div>
