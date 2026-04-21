@@ -199,7 +199,22 @@ async def _run_campaign(campaign_id: int):
             account_ids = list(campaign.account_ids or [])  # keep in sync
             account = _pick_account(db, account_ids, campaign)
             if not account:
-                # Auto-provisioning disabled — wait for accounts to become available
+                # Check if all accounts are in error state — if so, stop immediately
+                all_accounts = (
+                    db.query(models.Account)
+                    .filter(models.Account.id.in_(account_ids))
+                    .all()
+                )
+                if all_accounts and all(a.status == "error" for a in all_accounts):
+                    _db_log(db,
+                            "All accounts have login errors — stopping campaign. "
+                            "Fix each account: Accounts tab → Edit → add correct password → save → "
+                            "click the refresh icon to reset status, then restart this campaign.",
+                            "error", campaign_id=campaign_id)
+                    campaign.status = "stopped"
+                    db.commit()
+                    return
+
                 _db_log(db, "All accounts at daily limit or busy — waiting 30 min",
                         "info", campaign_id=campaign_id)
                 await asyncio.sleep(30 * 60)
@@ -351,7 +366,21 @@ async def _run_session(db: DBSession, account: models.Account, campaign: models.
         session.status = "failed"
         session.error_message = str(e)
         session.completed_at = datetime.now(timezone.utc)
-        account.status = "idle"
+
+        # Login failures → mark account as "error" so the engine stops
+        # retrying the same broken account on every cycle.
+        # All other failures (navigation, timeout, etc.) keep "idle" so they retry.
+        err_str = str(e)
+        if "Could not verify signed-in state" in err_str or "No stored password" in err_str:
+            account.status = "error"
+            _db_log(db,
+                    f"Account {account.email} flagged as error — login failed repeatedly. "
+                    "Fix: Accounts tab → Edit (pencil) → add the correct Google password → save. "
+                    "Then reset the account status (refresh icon) and restart the campaign.",
+                    "error", campaign_id=campaign.id, account_id=account.id)
+        else:
+            account.status = "idle"
+
         db.commit()
         log(f"Session failed: {e}", "error")
         await close_context(account.id)
