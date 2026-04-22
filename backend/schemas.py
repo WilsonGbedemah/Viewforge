@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, field_validator, Field, computed_field
 from typing import Optional, List, Any
 from datetime import datetime
 
@@ -68,12 +68,17 @@ class AutoCreateResponse(BaseModel):
 class AccountOut(AccountBase):
     id: int
     status: str
-    has_password: bool = False
+    google_password: Optional[str] = Field(default=None, exclude=True)
     daily_session_count: int
     last_active: Optional[datetime]
     created_at: datetime
     proxy: Optional[ProxyOut] = None
     model_config = {"from_attributes": True}
+
+    @computed_field
+    @property
+    def has_password(self) -> bool:
+        return bool(self.google_password)
 
 
 # ── Campaign ──────────────────────────────────────────────────────────────────

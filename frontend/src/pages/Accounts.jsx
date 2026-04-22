@@ -4,15 +4,8 @@ import Badge from '../components/Badge'
 import Modal from '../components/Modal'
 import { Plus, Trash2, RefreshCw, Edit2 } from 'lucide-react'
 
-const ACCOUNT_EMPTY = { label: '', email: '', google_password: '', proxy_id: '', watch_style: 'random', notes: '' }
+const ACCOUNT_EMPTY = { label: '', email: '', google_password: '', proxy_id: '', notes: '' }
 const PROXY_EMPTY   = { label: '', host: '', port: '', username: '', password: '', protocol: 'http' }
-
-const WATCH_STYLES = [
-  { value: 'random', label: 'Random (weighted mix)' },
-  { value: 'short',  label: 'Short viewer (mostly brief)' },
-  { value: 'medium', label: 'Medium viewer' },
-  { value: 'long',   label: 'Long viewer (mostly full)' },
-]
 
 export default function Accounts() {
   const [accounts,   setAccounts]  = useState([])
@@ -47,7 +40,6 @@ export default function Accounts() {
       email:          acc.email,
       google_password:'',
       proxy_id:       acc.proxy_id || '',
-      watch_style:    acc.watch_style || 'random',
       notes:          acc.notes || '',
     })
     setError('')
@@ -67,7 +59,6 @@ export default function Accounts() {
         email:          accForm.email.trim(),
         google_password:accForm.google_password.trim(),
         proxy_id:       accForm.proxy_id ? Number(accForm.proxy_id) : null,
-        watch_style:    accForm.watch_style,
         notes:          accForm.notes.trim() || null,
       })
       setModal(null)
@@ -80,10 +71,9 @@ export default function Accounts() {
     setLoading(true); setError('')
     try {
       const patch = {
-        label:       accForm.label,
-        proxy_id:    accForm.proxy_id ? Number(accForm.proxy_id) : null,
-        watch_style: accForm.watch_style,
-        notes:       accForm.notes || null,
+        label:    accForm.label,
+        proxy_id: accForm.proxy_id ? Number(accForm.proxy_id) : null,
+        notes:    accForm.notes || null,
       }
       if (accForm.google_password.trim()) patch.google_password = accForm.google_password.trim()
       await api.updateAccount(selected.id, patch)
@@ -260,12 +250,6 @@ export default function Accounts() {
               </select>
             </div>
             <div>
-              <label className="text-xs font-mono text-forge-dim mb-1 block">Viewing Style</label>
-              <select className="w-full px-3 py-2 text-sm" value={accForm.watch_style} onChange={af('watch_style')}>
-                {WATCH_STYLES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-              </select>
-            </div>
-            <div>
               <label className="text-xs font-mono text-forge-dim mb-1 block">Notes</label>
               <input className="w-full px-3 py-2 text-sm" placeholder="Optional notes"
                 value={accForm.notes} onChange={af('notes')} />
@@ -304,12 +288,6 @@ export default function Accounts() {
               <select className="w-full px-3 py-2 text-sm" value={accForm.proxy_id} onChange={af('proxy_id')}>
                 <option value="">— None —</option>
                 {proxies.map(p => <option key={p.id} value={p.id}>{p.label} ({p.host}:{p.port})</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-mono text-forge-dim mb-1 block">Viewing Style</label>
-              <select className="w-full px-3 py-2 text-sm" value={accForm.watch_style} onChange={af('watch_style')}>
-                {WATCH_STYLES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
               </select>
             </div>
             <div>
