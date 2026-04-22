@@ -4,7 +4,7 @@ import Badge from '../components/Badge'
 import Modal from '../components/Modal'
 import { Plus, Trash2, RefreshCw, Edit2 } from 'lucide-react'
 
-const ACCOUNT_EMPTY = { label: '', email: '', google_password: '', proxy_id: '', notes: '' }
+const ACCOUNT_EMPTY = { label: '', email: '', google_password: '', proxy_id: '', notes: '', cookie_data: '' }
 const PROXY_EMPTY   = { label: '', host: '', port: '', username: '', password: '', protocol: 'http' }
 
 export default function Accounts() {
@@ -41,6 +41,7 @@ export default function Accounts() {
       google_password:'',
       proxy_id:       acc.proxy_id || '',
       notes:          acc.notes || '',
+      cookie_data:    acc.cookie_data || '',
     })
     setError('')
     setModal('edit')
@@ -60,6 +61,7 @@ export default function Accounts() {
         google_password:accForm.google_password.trim(),
         proxy_id:       accForm.proxy_id ? Number(accForm.proxy_id) : null,
         notes:          accForm.notes.trim() || null,
+        cookie_data:    accForm.cookie_data.trim() || null,
       })
       setModal(null)
       await load()
@@ -76,6 +78,7 @@ export default function Accounts() {
         notes:    accForm.notes || null,
       }
       if (accForm.google_password.trim()) patch.google_password = accForm.google_password.trim()
+      if (accForm.cookie_data.trim())     patch.cookie_data     = accForm.cookie_data.trim()
       await api.updateAccount(selected.id, patch)
       setModal(null)
       await load()
@@ -249,6 +252,19 @@ export default function Accounts() {
                 {proxies.map(p => <option key={p.id} value={p.id}>{p.label} ({p.host}:{p.port})</option>)}
               </select>
             </div>
+            <div className="rounded border border-forge-amber/30 bg-forge-amber/5 p-3 space-y-2">
+              <p className="text-xs font-mono text-forge-amber font-semibold">Session Cookies (required for server deployments)</p>
+              <p className="text-xs text-forge-dim font-mono leading-relaxed">
+                Google blocks password logins from cloud servers. To fix this:<br/>
+                1. On your <strong className="text-forge-text">local computer</strong>, open Chrome and log into this Gmail account.<br/>
+                2. Install the <strong className="text-forge-text">Cookie-Editor</strong> browser extension.<br/>
+                3. Click Cookie-Editor → <strong className="text-forge-text">Export → Export All</strong> (JSON).<br/>
+                4. Paste the copied JSON below.
+              </p>
+              <textarea className="w-full px-3 py-2 text-xs font-mono h-24 resize-none"
+                placeholder='Paste cookie JSON here — e.g. [{"name":"SSID","value":"...","domain":".google.com",...}]'
+                value={accForm.cookie_data} onChange={af('cookie_data')} />
+            </div>
             <div>
               <label className="text-xs font-mono text-forge-dim mb-1 block">Notes</label>
               <input className="w-full px-3 py-2 text-sm" placeholder="Optional notes"
@@ -289,6 +305,15 @@ export default function Accounts() {
                 <option value="">— None —</option>
                 {proxies.map(p => <option key={p.id} value={p.id}>{p.label} ({p.host}:{p.port})</option>)}
               </select>
+            </div>
+            <div className="rounded border border-forge-amber/30 bg-forge-amber/5 p-3 space-y-2">
+              <p className="text-xs font-mono text-forge-amber font-semibold">Session Cookies <span className="text-forge-dim font-normal">(leave blank to keep existing)</span></p>
+              <p className="text-xs text-forge-dim font-mono leading-relaxed">
+                On your local computer: log into Chrome → Cookie-Editor extension → Export All → paste JSON below.
+              </p>
+              <textarea className="w-full px-3 py-2 text-xs font-mono h-24 resize-none"
+                placeholder="Paste new cookie JSON to replace existing cookies, or leave blank to keep current"
+                value={accForm.cookie_data} onChange={af('cookie_data')} />
             </div>
             <div>
               <label className="text-xs font-mono text-forge-dim mb-1 block">Notes</label>

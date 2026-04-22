@@ -21,6 +21,15 @@ from automation.interaction import move_mouse_to
 YOUTUBE_URL   = "https://www.youtube.com"
 GOOGLE_SIGNIN = "https://accounts.google.com/signin"
 
+_REJECTED_MSG = (
+    "Google blocked this sign-in from the server IP — 'This browser or app may not be secure'. "
+    "Cloud servers are flagged by Google and cannot log in via password. "
+    "FIX: On your LOCAL computer, open Chrome and log into {email}. "
+    "Install the 'Cookie-Editor' extension, click it, choose 'Export → Export All' (JSON format). "
+    "Copy the JSON, go to Accounts → Edit (pencil icon) → paste into 'Session Cookies' → Save. "
+    "The engine will use those cookies instead of a password login."
+)
+
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
@@ -78,6 +87,10 @@ async def relogin(
         await page.goto(GOOGLE_SIGNIN, wait_until="domcontentloaded", timeout=20000)
         await asyncio.sleep(random.uniform(1.5, 2.5))
 
+        if _is_rejected(page):
+            _log(log_cb, _REJECTED_MSG.format(email=account.email), "error")
+            return False
+
         # ── Step 1: handle account picker ─────────────────────────────────────
         # If Google shows "Choose an account" we click the matching email,
         # or click "Use another account" if ours isn't listed.
@@ -92,6 +105,10 @@ async def relogin(
             await _click_next(page)
             await asyncio.sleep(random.uniform(2.0, 3.0))
 
+        if _is_rejected(page):
+            _log(log_cb, _REJECTED_MSG.format(email=account.email), "error")
+            return False
+
         # ── Step 3: navigate past passkey / "choose sign-in method" screens ───
         # Google increasingly shows a passkey screen first. We click through
         # to reach the password field.
@@ -102,6 +119,9 @@ async def relogin(
         try:
             await page.wait_for_selector(pass_sel, timeout=15000)
         except Exception:
+            if _is_rejected(page):
+                _log(log_cb, _REJECTED_MSG.format(email=account.email), "error")
+                return False
             url = page.url
             body = ""
             try:
@@ -109,10 +129,11 @@ async def relogin(
             except Exception:
                 pass
             _log(log_cb,
-                 f"Password field not found after navigating Google login (URL: {url}). "
-                 f"Page content: {body}. "
-                 "Google may be requiring a passkey, phone verification, or is blocking "
-                 "this sign-in attempt. Check the account at myaccount.google.com.",
+                 f"Password field not found (URL: {url}). "
+                 f"Page: {body}. "
+                 "Google may be requiring a passkey or phone verification. "
+                 "Fix: export session cookies from your local browser and paste them into "
+                 "Accounts → Edit → Session Cookies field.",
                  "error")
             return False
 
@@ -151,6 +172,10 @@ async def relogin(
 
 
 # ── Internal helpers ──────────────────────────────────────────────────────────
+
+def _is_rejected(page) -> bool:
+    return "/rejected" in page.url or "signin/v2/reject" in page.url
+
 
 def _log(cb, msg: str, level: str = "info"):
     if cb:
