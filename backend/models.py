@@ -53,6 +53,10 @@ class Account(Base):
     proxy = relationship("Proxy", back_populates="accounts")
     sessions = relationship("Session", back_populates="account")
 
+    @property
+    def has_password(self) -> bool:
+        return bool(self.google_password)
+
 
 class Campaign(Base):
     __tablename__ = "campaigns"

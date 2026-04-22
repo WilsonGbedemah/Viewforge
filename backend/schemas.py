@@ -68,6 +68,7 @@ class AutoCreateResponse(BaseModel):
 class AccountOut(AccountBase):
     id: int
     status: str
+    has_password: bool = False
     daily_session_count: int
     last_active: Optional[datetime]
     created_at: datetime

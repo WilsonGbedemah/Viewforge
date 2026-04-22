@@ -169,6 +169,7 @@ export default function Accounts() {
             <tr className="border-b border-forge-border text-forge-dim text-xs font-mono uppercase tracking-wider">
               <th className="text-left px-4 py-3">Label</th>
               <th className="text-left px-4 py-3">Email</th>
+              <th className="text-left px-4 py-3">Password</th>
               <th className="text-left px-4 py-3">Proxy</th>
               <th className="text-left px-4 py-3">Status</th>
               <th className="text-left px-4 py-3">Style</th>
@@ -189,6 +190,12 @@ export default function Accounts() {
               <tr key={acc.id} className="border-b border-forge-border/50 hover:bg-forge-muted/30 transition-colors">
                 <td className="px-4 py-3 font-medium text-forge-text">{acc.label}</td>
                 <td className="px-4 py-3 font-mono text-forge-dim text-xs">{acc.email}</td>
+                <td className="px-4 py-3 text-xs font-mono">
+                  {acc.has_password
+                    ? <span className="text-forge-green">✓ saved</span>
+                    : <span className="text-forge-red font-semibold">✗ missing — edit to add</span>
+                  }
+                </td>
                 <td className="px-4 py-3 text-xs font-mono text-forge-dim">
                   {acc.proxy ? `${acc.proxy.host}:${acc.proxy.port}` : '—'}
                 </td>

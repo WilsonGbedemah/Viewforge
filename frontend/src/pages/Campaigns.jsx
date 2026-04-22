@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { api } from '../api'
+import { useEffect, useState, useRef } from 'react'
+import { api, connectLogStream } from '../api'
 import Badge from '../components/Badge'
 import Modal from '../components/Modal'
 import { Plus, Play, Square, Trash2, Edit2, ChevronDown, ChevronUp, Download } from 'lucide-react'
@@ -53,6 +53,8 @@ export default function Campaigns() {
   const [sessions,  setSessions]  = useState({})
   const [error,     setError]     = useState('')
   const [loading,   setLoading]   = useState(false)
+  const [liveActivity, setLiveActivity] = useState({})
+  const wsRef = useRef(null)
 
   const load = async () => {
     const [c, a, p] = await Promise.all([api.listCampaigns(), api.listAccounts(), api.listProxies()])
@@ -62,6 +64,15 @@ export default function Campaigns() {
   }
 
   useEffect(() => { load() }, [])
+
+  useEffect(() => {
+    wsRef.current = connectLogStream((msg) => {
+      if (msg.campaign_id) {
+        setLiveActivity(prev => ({ ...prev, [msg.campaign_id]: msg }))
+      }
+    })
+    return () => { if (wsRef.current) wsRef.current.close() }
+  }, [])
 
   const openAdd = () => {
     setEditing(null)
@@ -243,6 +254,32 @@ export default function Campaigns() {
                       style={{ width: `${pct}%` }} />
                   </div>
                 </div>
+
+                {/* Live activity indicator */}
+                {c.status === 'running' && liveActivity[c.id] && (
+                  <div className="flex items-center gap-2 mt-2 px-2 py-1.5 rounded bg-forge-muted/60">
+                    <span className="relative flex h-2 w-2 shrink-0">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-forge-green opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-forge-green" />
+                    </span>
+                    <span className={`text-xs font-mono truncate ${
+                      liveActivity[c.id].level === 'error' ? 'text-forge-red' :
+                      liveActivity[c.id].level === 'warning' ? 'text-forge-amber' :
+                      'text-forge-dim'
+                    }`}>
+                      {liveActivity[c.id].message}
+                    </span>
+                  </div>
+                )}
+                {c.status === 'running' && !liveActivity[c.id] && (
+                  <div className="flex items-center gap-2 mt-2 px-2 py-1.5 rounded bg-forge-muted/60">
+                    <span className="relative flex h-2 w-2 shrink-0">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-forge-green opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-forge-green" />
+                    </span>
+                    <span className="text-xs font-mono text-forge-dim">Campaign running — waiting for activity…</span>
+                  </div>
+                )}
 
                 {/* Config chips */}
                 <div className="flex flex-wrap gap-1.5 mt-3">
